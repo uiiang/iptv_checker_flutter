@@ -22,43 +22,6 @@ class HomeView extends GetView<HomeController> {
                   ? controller.logList.value.last
                   : "已选择${controller.getSelectedCount()}个频道")),
           centerTitle: true,
-          actions: [
-            DPadDetector(
-              onTap: () {
-                print("DPadDetector setting");
-              },
-              child: IconButton(
-                onPressed: () {
-                  print("setting");
-                },
-                icon: const Icon(
-                  Icons.settings,
-                  color: Colors.black,
-                  size: 24.0,
-                  semanticLabel: '设置',
-                ),
-                disabledColor: Colors.grey,
-              ),
-            ),
-            DPadDetector(
-                onTap: () {
-                  print("DPadDetector do");
-                  controller.genM3u8();
-                },
-                child: IconButton(
-                  onPressed: () {
-                    // print("do");
-                    controller.genM3u8();
-                  },
-                  icon: const Icon(
-                    Icons.check,
-                    color: Colors.orange,
-                    size: 24.0,
-                    semanticLabel: '开始生成文件',
-                  ),
-                  disabledColor: Colors.grey,
-                )),
-          ],
         ),
         // body: CountriesView(),
         body: Row(

@@ -21,7 +21,7 @@ class Data {
   List<String>? languages;
   String? flag;
   final selected=false.obs;
-  late final focused = false.obs;
+  final status = "".obs;
 
   Data({this.name, this.code, this.languages, this.flag});
 
