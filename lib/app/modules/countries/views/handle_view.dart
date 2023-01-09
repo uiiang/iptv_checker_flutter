@@ -37,37 +37,31 @@ class HandleView extends StatelessWidget {
         },
       );
     });
+
     Row btnPanel = Row(
       children: [
         //清除
         DPadDetector(
-            child: Obx(
-          () => ElevatedButton(
-            onPressed: controller.handleing.value
-                ? null
-                : () {
-                    controller.clearSelect();
-                    controller.saveData();
-                  },
-            child: const Text("清除"),
-          ),
-        )),
+          onTap: () {
+            print('clear');
+            controller.clearSelect();
+          },
+          child: buildHandleBtn("清除"),
+        ),
         //生成
         DPadDetector(
-          child: Obx(
-            () => ElevatedButton(
-                onPressed: controller.handleing.value
-                    ? null
-                    : () {
-                        print('generator');
-                        controller.saveData();
-                        controller.genM3u8();
-                      },
-                child: Text(controller.handleing.value ? '生成中' : '生成')),
+          onTap: () {
+            print('generator 2');
+            // controller.saveData();
+            // controller.genM3u8();
+          },
+          child: buildHandleBtn(
+            controller.handleing.value ? '生成中' : '生成',
           ),
         ),
       ],
     );
+
     return Column(
       children: [
         Expanded(

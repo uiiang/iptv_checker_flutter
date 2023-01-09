@@ -2,9 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_saver/file_saver.dart';
-import 'package:m3u_nullsafe/m3u_nullsafe.dart';
-
 import 'package:iptv_checker_flutter/utils/api_service.dart';
+import 'package:m3u_nullsafe/m3u_nullsafe.dart';
 
 Future<String> saveM3u8File(content, filename, ext) async {
   List<int> textBytes = utf8.encode(content);

@@ -75,7 +75,7 @@ class _DPadDetectorState extends State<DPadDetector> {
         if (event.runtimeType != RawKeyUpEvent) {
           return;
         }
-        if (event.physicalKey == LogicalKeyboardKey.enter ||
+        if (//event.physicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.select) {
           widget.onTap?.call();
