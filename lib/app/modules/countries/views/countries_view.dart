@@ -12,8 +12,7 @@ class CountriesView extends GetView<CountriesController> {
 
   @override
   Widget build(BuildContext context) {
-    Get.put(CountriesController());
-    return GridView.builder(
+    return Obx(() => GridView.builder(
       shrinkWrap: false,
       padding: const EdgeInsets.all(10),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -49,6 +48,6 @@ class CountriesView extends GetView<CountriesController> {
               ),
             )));
       },
-    );
+    ));
   }
 }

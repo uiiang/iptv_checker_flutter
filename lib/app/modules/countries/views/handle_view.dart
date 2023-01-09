@@ -15,7 +15,7 @@ class HandleView extends StatelessWidget {
     final selectedListPanel = Obx(() {
       final selectList = controller.getSelectedCountriesList();
       return ListView.builder(
-        shrinkWrap:true,
+        shrinkWrap: true,
         itemCount: selectList.length,
         itemBuilder: (BuildContext context, int index) {
           final item = selectList[index];

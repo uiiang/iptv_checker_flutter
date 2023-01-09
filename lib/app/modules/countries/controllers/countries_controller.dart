@@ -16,6 +16,10 @@ class CountriesController extends GetxController {
   void onInit() {
     LU.d('onInit', tag: _TAG);
     super.onInit();
+  }
+  @override
+  void onReady() {
+    super.onReady();
     fetchIptvCountries();
   }
 
