@@ -116,11 +116,12 @@ class _DPadDetectorState extends State<DPadDetector> {
           duration: const Duration(milliseconds: 250),
           builder: (context, child, value) {
             return Container(
-              margin: EdgeInsets.all(value * 5),
+              margin: EdgeInsets.all(value * 8),
+              // color: Colors.transparent,
               decoration: BoxDecoration(
-                color: widget.focusColor.withOpacity(value * 0.2),
+                color: hasFocus?widget.focusColor.withOpacity(value):Colors.transparent,
                 border: Border.all(
-                  color: widget.focusColor.withOpacity(value),
+                  color: widget.focusColor.withOpacity(value * 0.2),
                   width: value,
                 ),
                 borderRadius: BorderRadius.circular(widget.focusRadius),

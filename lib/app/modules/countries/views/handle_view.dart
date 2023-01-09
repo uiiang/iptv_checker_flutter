@@ -15,6 +15,7 @@ class HandleView extends StatelessWidget {
     final selectedListPanel = Obx(() {
       final selectList = controller.getSelectedCountriesList();
       return ListView.builder(
+        shrinkWrap:true,
         itemCount: selectList.length,
         itemBuilder: (BuildContext context, int index) {
           final item = selectList[index];
@@ -40,7 +41,8 @@ class HandleView extends StatelessWidget {
       children: [
         //清除
         DPadDetector(
-          child:Obx(() =>  ElevatedButton(
+            child: Obx(
+          () => ElevatedButton(
             onPressed: controller.handleing.value
                 ? null
                 : () {
@@ -52,15 +54,16 @@ class HandleView extends StatelessWidget {
         )),
         //生成
         DPadDetector(
-          child: Obx(() =>  ElevatedButton(
-            onPressed: controller.handleing.value
-                ? null
-                : () {
-                    print('generator');
-                    controller.saveData();
-                    controller.genM3u8();
-                  },
-            child:Text(controller.handleing.value ? '生成中' : '生成')),
+          child: Obx(
+            () => ElevatedButton(
+                onPressed: controller.handleing.value
+                    ? null
+                    : () {
+                        print('generator');
+                        controller.saveData();
+                        controller.genM3u8();
+                      },
+                child: Text(controller.handleing.value ? '生成中' : '生成')),
           ),
         ),
       ],
