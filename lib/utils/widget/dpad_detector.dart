@@ -108,21 +108,29 @@ class _DPadDetectorState extends State<DPadDetector> {
         onLongPress: () {
           widget.onMenuTap?.call();
         },
-        child: CustomAnimation<double>(
-          control: hasFocus
-              ? CustomAnimationControl.playReverse
-              : CustomAnimationControl.play,
-          tween: Tween(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 250),
-          builder: (context, child, value) {
+        child: PlayAnimationBuilder<double>(
+          tween: Tween(begin: 2.0, end: 1.0),
+          duration: const Duration(seconds: 1),
+          child: widget.child,
+          // builder: (context, value, child) {
+          //   return Container(
+          //     width: value,
+          //     height: value,
+          //     color: Colors.green,
+          //     child: child, // use child inside the animation
+          //   );
+          // },
+          builder: (context, value, child) {
             return Container(
-              margin: EdgeInsets.all(value * 8),
+              margin: EdgeInsets.all(value * 2),
               // color: Colors.transparent,
               decoration: BoxDecoration(
-                color: hasFocus?widget.focusColor.withOpacity(value):Colors.transparent,
+                color: hasFocus
+                    ? widget.focusColor.withOpacity(value * 0.4)
+                    : Colors.transparent,
                 border: Border.all(
-                  color: widget.focusColor.withOpacity(value * 0.2),
-                  width: value,
+                  color: widget.focusColor.withOpacity(value * 0.1),
+                  width: hasFocus ? value * 4 : value,
                 ),
                 borderRadius: BorderRadius.circular(widget.focusRadius),
               ),
