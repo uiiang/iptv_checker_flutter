@@ -14,6 +14,7 @@ class HandleView extends StatelessWidget {
     CountriesController controller = Get.put(CountriesController());
     final selectedListPanel = Obx(() {
       final selectList = controller.getSelectedCountriesList();
+      // controller.checkSelectedEpg(selectList);
       return ListView.builder(
         shrinkWrap: true,
         itemCount: selectList.length,
@@ -25,15 +26,17 @@ class HandleView extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: Colors.black, width: 1),
+                border: Border.all(color: Colors.blue, width: 1),
               ),
               child: ListTile(
-                title: getCountryItemRow(item),
-                subtitle: Obx(() => Text(
+                  title: getCountryItemRow(item, fontSize: 12.0),
+                  subtitle: Obx(() {
+                    return Text(
                       item.status.value,
                       style: const TextStyle(fontSize: 12),
-                    )),
-              ));
+                    );
+                  }),
+                  trailing: Obx(() => buildEpgFlag(item.hasEpg.value))));
         },
       );
     });
@@ -52,8 +55,8 @@ class HandleView extends StatelessWidget {
         DPadDetector(
           onTap: () {
             print('generator 2');
-            // controller.saveData();
-            // controller.genM3u8();
+            controller.saveData();
+            controller.genM3u8();
           },
           child: buildHandleBtn(
             controller.handleing.value ? '生成中' : '生成',

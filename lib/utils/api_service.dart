@@ -8,6 +8,14 @@ import '../app/modules/countries/countries_model.dart';
 
 class ApiService {
   static const _TAG = 'ApiService';
+
+  static Future<String> fetchIptvEpg(String flag) async {
+    //https://iptv-org.github.io/epg/guides/af.xml
+    var response =
+        await Dio().get('https://iptv-org.github.io/epg/guides/$flag.xml');
+    return response.toString();
+  }
+
   static Future<String> fetchIptvByCountry(String flag) async {
     //  https://iptv-org.github.io/iptv/countries/af.m3u
     // https://raw.fastgit.org/iptv-org/iptv/master/streams/cn_cctv.m3u

@@ -22,6 +22,7 @@ class Data {
   String? flag;
   final selected=false.obs;
   final status = "".obs;
+  final hasEpg = false.obs;
 
   Data({this.name, this.code, this.languages, this.flag});
 

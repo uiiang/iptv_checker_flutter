@@ -1,9 +1,79 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:iptv_checker_flutter/utils/api_service.dart';
 import 'package:m3u_nullsafe/m3u_nullsafe.dart';
+import 'package:xml/xml.dart';
+
+Future<int> checkUrlHttpClient(url, {timeout = 2000}) async {
+  var start = DateTime.now();
+  print('checkUrlHttpClient $url');
+  // final client = RetryClient(http.Client(), retries: retryTime);
+  // try {
+  //   client.get(Uri.parse(url));
+  // } finally {
+  //   client.close();
+  // }
+  try {
+    HttpClient httpClient = HttpClient();
+    httpClient.connectionTimeout = Duration(milliseconds: timeout);
+    HttpClientRequest request = await httpClient.getUrl(Uri.parse(url));
+    HttpClientResponse response = await request.close();
+    if (response.statusCode == 200) {
+      final diff = getDiff(start);
+      print(' is ok $diff');
+      return diff;
+    } else {
+      final diff = getDiff(start);
+      print('statuscode ${response.statusCode} $diff');
+      return diff;
+    }
+  } catch (e) {
+    print(e);
+    final diff = getDiff(start);
+    print('onError $diff');
+    return diff;
+  }
+}
+
+int getDiff(DateTime start) {
+  var end = DateTime.now().millisecondsSinceEpoch;
+  var s = DateTime.fromMillisecondsSinceEpoch(end);
+  return s.difference(start).inMilliseconds;
+}
+
+// dio的超时设置无效，使用checkUrlHttpClient方法来检测
+Future<bool> checkUrl(url) async {
+  var start = DateTime.now();
+  try {
+    final response = await Dio()
+        .get(url, options: Options(sendTimeout: 1, receiveTimeout: 1),
+            onReceiveProgress: (count, total) {
+      print('count $count total $total');
+    });
+    if (response.statusCode == 200) {
+      var end = DateTime.now().millisecondsSinceEpoch;
+      var s = DateTime.fromMillisecondsSinceEpoch(end);
+      print(' is ok ${s.difference(start).inMilliseconds}');
+      // return start
+      //     .difference(s)
+      //     .inSeconds;
+      return true;
+    }
+  } catch (e) {
+    print(e);
+    var end = DateTime.now().millisecondsSinceEpoch;
+    var s = DateTime.fromMillisecondsSinceEpoch(end);
+    print('onError ${s.difference(start).inMilliseconds}');
+    // return -1;
+    return false;
+  }
+  // return -1;
+  return false;
+}
 
 Future<String> saveM3u8File(content, filename, ext) async {
   List<int> textBytes = utf8.encode(content);
@@ -42,6 +112,44 @@ Future<List<M3uGenericEntry>> getOnlineChannelByCountryCode(String code) async {
   List<M3uGenericEntry> channelData = await getOnlineChannel(m3uData);
   return channelData;
   // return createM3uContent(channelData);
+}
+
+Future<bool> checkEpgUrlByCountry(String code) async {
+  const timeout = 5000;
+  final sec = await checkUrlHttpClient(
+      'https://iptv-org.github.io/epg/guides/$code.xml',
+      timeout: timeout);
+  return timeout > sec;
+}
+
+Future<XmlDocument> getEpgByCountryCode(String code) async {
+  String epgStr = await ApiService.fetchIptvEpg(code);
+  return XmlDocument.parse(epgStr);
+}
+
+Future<bool> genEpgHelper(List<String?> codes) async {
+  String content = "";
+  for (final code in codes) {
+    if (code == null) {
+      continue;
+    }
+    print('start code $code');
+    final xmlDoc = await getEpgByCountryCode(code);
+    final channel = xmlDoc.findAllElements('channel');
+    final programme = xmlDoc.findAllElements('programme');
+    // channelList.setAll(0, channel);
+    // programmeList.setAll(0, programme);
+    final child = xmlDoc.rootElement.childElements;
+    print(
+        'channel ${channel.length} programme ${programme.length} child ${child.length}');
+    // for (final ch in child) {
+    //   print('ch $ch');
+    // }
+  }
+  // final builder = XmlBuilder();
+  // builder.processing('tv', 'date="1.0"');
+  // builder
+  return true;
 }
 
 void genM3u8Helper(List<String?> codes) async {

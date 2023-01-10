@@ -17,6 +17,7 @@ class CountriesController extends GetxController {
     LU.d('onInit', tag: _TAG);
     super.onInit();
   }
+
   @override
   void onReady() {
     super.onReady();
@@ -25,38 +26,40 @@ class CountriesController extends GetxController {
 
   void genM3u8() async {
     handleing.value = true;
-    String content = "#EXTM3U\n";
+    String m3u8Content = "#EXTM3U\n";
     Iterable<Data> selecteds = getSelectedCountriesList().map((e) {
       e.status.value = "等待中...";
       return e;
     });
+
     if (selecteds.isNotEmpty) {
-      print('共选择${selecteds.length}个国家频道');
-      for (final item in selecteds) {
-        if (item.code != null) {
-          print("开始解析${item.name}的频道");
-          item.status.value = "开始解析...";
-          List<M3uGenericEntry> channelData =
-              await getOnlineChannelByCountryCode(item.code!);
-          print("共找到${channelData.length}个可用的频道");
-          item.status.value = "共找到${channelData.length}个可用的频道";
-          if (channelData.isNotEmpty) {
-            print("开始生成${item.name}的m3u8内容");
-            item.status.value = "开始生成m3u8内容";
-            content += createM3uContent(channelData);
-            item.status.value = "完成解析-${channelData.length}个频道可用";
-          } else {
-            print("${item.name}频道无可用 跳过");
-            item.status.value = "无可用频道";
-          }
+      return;
+    }
+    print('共选择${selecteds.length}个国家频道');
+    for (final item in selecteds) {
+      if (item.code != null) {
+        print("开始解析${item.name}的频道");
+        item.status.value = "开始解析...";
+        List<M3uGenericEntry> channelData =
+            await getOnlineChannelByCountryCode(item.code!);
+        print("共找到${channelData.length}个可用的频道");
+        item.status.value = "共找到${channelData.length}个可用的频道";
+        if (channelData.isNotEmpty) {
+          print("开始生成${item.name}的m3u8内容");
+          item.status.value = "开始生成m3u8内容";
+          m3u8Content += createM3uContent(channelData);
+          item.status.value = "完成解析-${channelData.length}个频道可用";
+        } else {
+          print("${item.name}频道无可用 跳过");
+          item.status.value = "无可用频道";
         }
       }
-      // print('content $content');
-      // genM3u8Helper(codes);
-      String path = await saveM3u8File(content, "iptv_channel", "m3u");
-      print("生成m3u结束 文件保存在$path");
-      handleing.value = false;
     }
+    // print('m3u8Content $m3u8Content');
+    // genM3u8Helper(codes);
+    String path = await saveM3u8File(m3u8Content, "iptv_channel", "m3u");
+    print("生成m3u结束 文件保存在$path");
+    handleing.value = false;
   }
 
   void fetchIptvCountries() async {
@@ -70,6 +73,10 @@ class CountriesController extends GetxController {
         element.selected.value = selectedCountry.contains(element.code);
         return element;
       }).toList();
+      getSelectedCountriesList().forEach((element) {
+        checkEpgUrlByCountry(element.code!.toLowerCase())
+            .then((value) => element.hasEpg.value = value);
+      });
       countriesCount.value = countries.length;
     } else {
       countries.value = [];
@@ -86,10 +93,24 @@ class CountriesController extends GetxController {
     }).toList();
   }
 
-  void selectItem(int index) {
+  checkSelectedEpg(List<Data> selectedList) async {
+    for (final item in selectedList) {
+      if (item.hasEpg.value) {
+        continue;
+      }
+      print('checkSelectedEpg');
+      item.hasEpg.value = await checkEpgUrlByCountry(item.code!.toLowerCase());
+    }
+  }
+
+  void selectItem(int index) async {
     // LU.d('selectitem $selected $index',tag: _TAG);
-    countries[index].selected.value =
-        !countries[index].selected.value;
+    countries[index].selected.value = !countries[index].selected.value;
+    if (countries[index].selected.value && countries[index].code != null) {
+      print('selectItem');
+      countries[index].hasEpg.value =
+          await checkEpgUrlByCountry(countries[index].code!.toLowerCase());
+    }
   }
 
   int getSelectedCount() {
