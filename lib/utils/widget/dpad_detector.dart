@@ -72,12 +72,12 @@ class _DPadDetectorState extends State<DPadDetector> {
     return RawKeyboardListener(
       focusNode: focusNode,
       onKey: (event) {
-        if (event.runtimeType != RawKeyUpEvent) {
+        if (event.runtimeType != RawKeyUpEvent || !widget.enabled) {
           return;
         }
-        if (//event.physicalKey == LogicalKeyboardKey.enter ||
+        if ( //event.physicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.enter ||
-            event.logicalKey == LogicalKeyboardKey.select) {
+                event.logicalKey == LogicalKeyboardKey.select) {
           widget.onTap?.call();
         }
         if (event.logicalKey == LogicalKeyboardKey.contextMenu ||
@@ -92,22 +92,32 @@ class _DPadDetectorState extends State<DPadDetector> {
         }
       },
       child: GestureDetector(
-        onLongPressStart: (_) {
-          widget.onLongPress?.call();
-        },
-        onTapDown: (_) {
-          focusNode.requestFocus();
-        },
-        onTapUp: (_) {
-          focusNode.unfocus();
-          widget.onTap?.call();
-        },
-        onTapCancel: () {
-          focusNode.unfocus();
-        },
-        onLongPress: () {
-          widget.onMenuTap?.call();
-        },
+        onLongPressStart: widget.enabled
+            ? (_) {
+                widget.onLongPress?.call();
+              }
+            : null,
+        onTapDown: widget.enabled
+            ? (_) {
+                focusNode.requestFocus();
+              }
+            : null,
+        onTapUp: widget.enabled
+            ? (_) {
+                focusNode.unfocus();
+                widget.onTap?.call();
+              }
+            : null,
+        onTapCancel: widget.enabled
+            ? () {
+                focusNode.unfocus();
+              }
+            : null,
+        onLongPress: widget.enabled
+            ? () {
+                widget.onMenuTap?.call();
+              }
+            : null,
         child: PlayAnimationBuilder<double>(
           tween: Tween(begin: 2.0, end: 1.0),
           duration: const Duration(seconds: 1),

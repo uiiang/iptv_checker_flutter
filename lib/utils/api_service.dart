@@ -20,7 +20,7 @@ class ApiService {
     //  https://iptv-org.github.io/iptv/countries/af.m3u
     // https://raw.fastgit.org/iptv-org/iptv/master/streams/cn_cctv.m3u
     var response = await Dio().get(
-        "https://raw.fastgit.org/iptv-org/iptv/master/streams/${flag.toLowerCase()}.m3u");
+        "https://iptv-org.github.io/iptv/countries/${flag.toLowerCase()}.m3u");
     // print('response $response');
     return response.toString();
   }

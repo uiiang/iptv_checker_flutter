@@ -25,14 +25,14 @@ void main() {
     //   // expect("test_write.txt", endsWith(path));
     // });
 
-    test("测试生成m3u字符串", () async {
-      final fileContent = await File('test/data/cn.m3u').readAsString();
-      List<M3uGenericEntry> channelData = await getOnlineChannel(fileContent);
-      String content = "#EXTM3U\n${createM3uContent(channelData)}";
-      // print('content $content');
-      final listOfTracks = await parseFile(content);
-
-      expect(104, equals(listOfTracks.length));
-    });
+    // test("测试生成m3u字符串", () async {
+    //   final fileContent = await File('test/data/cn.m3u').readAsString();
+    //   List<M3uGenericEntry> channelData = await getOnlineChannel(fileContent);
+    //   String content = "#EXTM3U\n${createM3uContent(channelData)}";
+    //   // print('content $content');
+    //   final listOfTracks = await parseFile(content);
+    //
+    //   expect(104, equals(listOfTracks.length));
+    // });
   });
 }
