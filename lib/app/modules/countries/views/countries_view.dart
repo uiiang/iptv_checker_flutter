@@ -25,6 +25,7 @@ class CountriesView extends GetView<CountriesController> {
       itemBuilder: (BuildContext context, int index) {
         final item = controller.countries[index];
         return Obx(() => DPadDetector(
+          enabled: !controller.handleing.value,
           focusColor: Colors.blue,
             onMenuTap: () {},
             onTap: () {

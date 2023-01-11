@@ -45,22 +45,20 @@ class HandleView extends StatelessWidget {
       children: [
         //清除
         Obx(() => DPadDetector(
-              onTap: controller.handleing.value
-                  ? null
-                  : () {
-                      print('clear');
-                      controller.clearSelect();
-                    },
+              enabled: !controller.handleing.value,
+              onTap: () {
+                print('clear');
+                controller.clearSelect();
+              },
               child: buildHandleBtn("清除", disable: controller.handleing.value),
             )),
         //生成
         Obx(() => DPadDetector(
-              onTap: controller.handleing.value
-                  ? null
-                  : () {
-                      controller.saveData();
-                      controller.genM3u8();
-                    },
+              enabled: !controller.handleing.value,
+              onTap: () {
+                controller.saveData();
+                controller.genM3u8();
+              },
               child: buildHandleBtn(controller.handleing.value ? '生成中' : '生成',
                   disable: controller.handleing.value),
             )),
