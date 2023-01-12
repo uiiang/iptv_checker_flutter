@@ -119,7 +119,7 @@ class _DPadDetectorState extends State<DPadDetector> {
               }
             : null,
         child: PlayAnimationBuilder<double>(
-          tween: Tween(begin: 2.0, end: 1.0),
+          tween: Tween(begin: 1.0, end: 1.0),
           duration: const Duration(seconds: 1),
           child: widget.child,
           // builder: (context, value, child) {

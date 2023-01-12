@@ -23,6 +23,9 @@ class Data {
   final selected=false.obs;
   final status = "".obs;
   final hasEpg = false.obs;
+  final okCount = 0.obs;
+  final errorCount = 0.obs;
+  final channelCount = 0.obs;
 
   Data({this.name, this.code, this.languages, this.flag});
 

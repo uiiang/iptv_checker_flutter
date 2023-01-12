@@ -13,6 +13,7 @@ class CountriesController extends GetxController {
   final countries = <Data>[].obs;
   final countriesCount = 0.obs;
   final handleing = false.obs;
+  final setting = false.obs;
 
   @override
   void onInit() {
@@ -24,6 +25,10 @@ class CountriesController extends GetxController {
   void onReady() {
     super.onReady();
     fetchIptvCountries();
+  }
+
+  void toggleSetting() {
+    setting.value = !setting.value;
   }
 
   void genM3u8() async {
@@ -43,22 +48,31 @@ class CountriesController extends GetxController {
     List<M3uGenericEntry> allCodeEntry = [];
     int doneCount = 0;
     stream.listen((item) async {
-      print("开始解析${item.name}的频道");
-      item.status.value = "开始解析...";
+      print("开始检测${item.name}的频道");
+      item.status.value = "开始检测...";
       final listOfTracks = await getChannelByCountryCode(item.code!);
+      item.channelCount.value = listOfTracks.length;
       List<M3uGenericEntry> currCodeEntry = [];
+      int errorCount = 0;
       getAvailableChannelByCountryCode(listOfTracks).listen((availableChannel) {
-        currCodeEntry.add(availableChannel);
-        print("${item.name}找到第${currCodeEntry.length}个可用的频道");
-        item.status.value =
-            "正在解析...\n共${listOfTracks.length}个频道${currCodeEntry.length}个可用";
+        if (availableChannel != null) {
+          currCodeEntry.add(availableChannel);
+          print("${item.name}找到第${currCodeEntry.length}个可用的频道");
+        } else {
+          errorCount += 1;
+        }
+        item.okCount.value = currCodeEntry.length;
+        item.errorCount.value = errorCount;
+        item.status.value = "正在检测...";
+      }, onError: (err) {
+        print('check ${item.name}频道发生错误, $err');
       }).onDone(() {
         if (currCodeEntry.isNotEmpty) {
-          print("${item.name}完成解析,${currCodeEntry.length}个可用的频道");
-          item.status.value = "完成解析-共${currCodeEntry.length}个可用频道";
+          print("${item.name}完成检测,${currCodeEntry.length}个可用的频道");
+          item.status.value = "完成检测";
           allCodeEntry.addAll(currCodeEntry);
         } else {
-          item.status.value = "完成解析-无可用频道";
+          item.status.value = "完成检测-无可用频道";
         }
 
         doneCount += 1;
@@ -66,10 +80,15 @@ class CountriesController extends GetxController {
           dataController.close();
         }
       });
+    }, onError: (e) {
+      print('check all onError $e');
     }, onDone: () async {
-      Iterable<String> content = allCodeEntry.map((entry){
-        return createM3uContent(entry);
-      }).toSet().toList();
+      Iterable<String> content = allCodeEntry
+          .map((entry) {
+            return createM3uContent(entry);
+          })
+          .toSet()
+          .toList();
 
       print('全部频道检测完毕 ${allCodeEntry.length}个可用频道, 去重后${content.length}');
       print("开始制作m3u8文件");

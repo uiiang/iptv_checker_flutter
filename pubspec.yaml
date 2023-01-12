@@ -14,6 +14,7 @@ dependencies:
   simple_animations: ^5.0.0+3
   m3u_nullsafe: ^1.0.4
   file_saver: ^0.1.1
+  settings_ui: ^2.0.2
   xml: any
   flutter:
     sdk: flutter

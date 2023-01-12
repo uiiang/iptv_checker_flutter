@@ -129,7 +129,7 @@ Future<List<M3uGenericEntry>> getChannelByCountryCode(String code) async {
   return await parseFile(m3uData);
 }
 
-Stream<M3uGenericEntry> getAvailableChannelByCountryCode(
+Stream<M3uGenericEntry?> getAvailableChannelByCountryCode(
     List<M3uGenericEntry> listOfTracks) async* {
   const timeout = 2000;
   for (final item in listOfTracks) {
@@ -137,6 +137,8 @@ Stream<M3uGenericEntry> getAvailableChannelByCountryCode(
     if (duration > 0 && timeout > duration) {
       // availableList.add(item);
       yield item;
+    } else {
+      yield null;
     }
   }
   // return channelData;
