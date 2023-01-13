@@ -4,10 +4,47 @@ import 'dart:io';
 import 'package:flustars/flustars.dart';
 import 'package:get/get.dart';
 import 'package:iptv_checker_flutter/app/modules/countries/countries_model.dart';
+import 'package:iptv_checker_flutter/config.dart';
 import 'package:iptv_checker_flutter/utils/api_service.dart';
 import 'package:iptv_checker_flutter/utils/file_util.dart';
 import 'package:iptv_checker_flutter/utils/log_util.dart';
 import 'package:iptv_checker_flutter/utils/m3u8_helper.dart';
+import 'package:m3u_nullsafe/m3u_nullsafe.dart';
+import 'package:worker_manager/worker_manager.dart';
+class StatusInfo {
+  int okCount = 0;
+  int errorCount = 0;
+}
+
+Future<StatusInfo> checkStatusOnline(String savePath, TypeSendPort port) async {
+  List<M3uGenericEntry> onlineEntryList = await getOnlineChannelLocal(savePath);
+  int allChannelCount = await getM3u8FileChannelCount(savePath);
+  StatusInfo statusInfo = StatusInfo();
+  statusInfo.okCount = onlineEntryList.length;
+  statusInfo.errorCount = allChannelCount - onlineEntryList.length;
+  return statusInfo;
+}
+
+// // Create your own function here
+// void isolateFunction(dynamic savePath) {
+//   print('isolateFunction savePath = $savePath');
+//   // Initial the controller for child isolate
+//   final channel = IsolateManagerController<StatusInfo>(savePath);
+//   channel.onIsolateMessage.listen((message) async {
+//     print('onIsolateMessage listen message = $message');
+//     // Do more stuff here
+//     List<M3uGenericEntry> onlineEntryList =
+//         await getOnlineChannelLocal(message);
+//     int allChannelCount = await getM3u8FileChannelCount(message);
+//     StatusInfo statusInfo = StatusInfo();
+//     statusInfo.okCount = onlineEntryList.length;
+//     statusInfo.errorCount = allChannelCount - onlineEntryList.length;
+//     final result = statusInfo;
+//
+//     // Send the result to your [onMessage] stream
+//     channel.sendResult(result);
+//   });
+// }
 
 class CountriesController extends GetxController {
   static const _TAG = 'CountriesController';
@@ -15,6 +52,16 @@ class CountriesController extends GetxController {
   final countriesCount = 0.obs;
   final handleing = false.obs;
   final setting = false.obs;
+
+  // final isolateManager = IsolateManager.create(
+  //   checkStatusOnline, // Function that you want to compute
+  //   concurrent: 4, // Number of concurrent isolates. Default is 1
+  // );
+  // final isolateManager = IsolateManager.createOwnIsolate(
+  //   isolateFunction,
+  //   initialParams: 'This is initialParams',
+  //   isDebug: true,
+  // );
 
   @override
   void onInit() {
@@ -26,38 +73,75 @@ class CountriesController extends GetxController {
   void onReady() {
     super.onReady();
     fetchIptvCountries();
+    // isolateManager.stream.listen((result) {
+    //   StatusInfo si = result;
+    //   print('result okCount ${si.okCount} errorCount ${si.errorCount}');
+    //   // item.okCount.value = result.okCount;
+    //   // item.errorCount.value = result.errorCount;
+    // } , onDone: (){
+    //   print('onDone 1');
+    // }).onDone(() {
+    //   print('ondone');
+    // });
   }
 
   void toggleSetting() {
     setting.value = !setting.value;
   }
 
-  void genM3u8RealTimeCheck() async {
-
-    HttpClient httpClient = HttpClient();
-    httpClient.connectionTimeout = Duration(milliseconds: 2000);
+  void genM3u8() async {
     FileUtil().removeDir(await FileUtil().getTmpPath());
     handleing.value = true;
-    Iterable<Data> selecteds = getSelectedCountriesList().map((e) {
-      e.status.value = "等待中...";
-      return e;
-    });
-
-    if (selecteds.isEmpty) {
+    Iterable<Data> selectedList = getSelectedCountriesList();
+    if (selectedList.isEmpty) {
       print('开始生成m3u8文件，无选中的国家，停止生成');
       handleing.value = false;
       return;
     }
-    print('共选择${selecteds.length}个国家频道');
-    StreamController<Data> dataController = StreamController();
-    Stream<Data> stream = dataController.stream;
-    // final tmpAllAvailablePath =
-    //     '${await FileUtil().getTmpPath()}/all_available.m3u';
+    selectedList = selectedList.map((e) {
+      e.status.value = "等待中...";
+      return e;
+    });
+    print('共选择${selectedList.length}个国家频道');
     File tmpAllAvailableFile = await FileUtil()
         .getOrCreateFile(await FileUtil().getTmpPath(), "all_available.m3u");
-    final tmpAllAvailablePath = tmpAllAvailableFile.path;
     FileUtil().writeStringToFileAppend(tmpAllAvailableFile, '#EXTM3U\n');
-    // List<M3uGenericEntry> allCodeEntry = [];
+    if (Config.isCheckRealtime()) {
+      genM3u8RealTimeCheck(tmpAllAvailableFile, selectedList);
+    } else {
+      genM3u8StatusCheck(tmpAllAvailableFile, selectedList);
+    }
+  }
+
+  /// 检测m3u8文件中的status标签，返回online，但是有些文件中不包含这个标签
+  void genM3u8StatusCheck(
+      File tmpAllAvailableFile, Iterable<Data> selectedList) async {
+
+    for (final item in selectedList) {
+      print('${item.name} savePath ${item.savePath}');
+
+      Executor().execute(arg1: item.savePath, fun1: checkStatusOnline).then((value) {
+        print('Executor ${value.okCount}');
+        item.okCount.value = value.okCount;
+        item.errorCount.value = value.errorCount;
+      });
+      // isolateManager.stop();
+      // isolateManager.sendMessage(item.savePath);
+    }
+    // stream.listen((item) async {
+    //   isolateManager.sendMessage(item.savePath);
+    // });
+    // isolateManager.sendMessage(selectedList.first.savePath);
+    handleing.value = false;
+    print('genM3u8StatusCheck4');
+  }
+
+  /// 实时检测m3u8频道是否可用
+  void genM3u8RealTimeCheck(tmpAllAvailableFile, selectedList) async {
+    HttpClient httpClient = HttpClient();
+    httpClient.connectionTimeout = const Duration(milliseconds: 2000);
+    StreamController<Data> dataController = StreamController();
+    Stream<Data> stream = dataController.stream;
     int doneCount = 0;
     stream.listen((item) async {
       print("开始检测${item.name}的频道");
@@ -69,12 +153,13 @@ class CountriesController extends GetxController {
       int errorCount = 0;
       int okCount = 0;
       final availablePath =
-          '${await FileUtil().getTmpAvailablePath()}/${item.code!.toLowerCase()}.m3u';
+          '${await FileUtil().getTmpAvailablePath()}/${item.code}.m3u';
       item.availablePath = availablePath;
       print('availablePath $availablePath');
       File currentAllAvailableFile = File(availablePath);
       FileUtil().writeStringToFileAppend(currentAllAvailableFile, '#EXTM3U\n');
-      getAvailableChannelByCountryCode(httpClient,listOfTracks).listen((availableChannel) {
+      getAvailableChannelByCountryCode(httpClient, listOfTracks).listen(
+          (availableChannel) {
         if (availableChannel != null) {
           FileUtil().writeStringToFileAppend(
               currentAllAvailableFile, createM3uContent(availableChannel));
@@ -106,7 +191,7 @@ class CountriesController extends GetxController {
           // FileUtil().writeStringToFileOnce(tmpAllAvailableFile, content.join(""));
         }).then((value) {
           doneCount += 1;
-          if (doneCount == selecteds.length) {
+          if (doneCount == selectedList.length) {
             dataController.close();
           }
         });
@@ -117,7 +202,7 @@ class CountriesController extends GetxController {
       final iptvChannelPath =
           '${await FileUtil().getDirectory()}/iptv_channel.m3u';
       await FileUtil().removeFile(iptvChannelPath);
-      getM3u8FileChannelListLocal(tmpAllAvailablePath)
+      getM3u8FileChannelListLocal(tmpAllAvailableFile.path)
           .then((m3uEntryList) async {
         Map<String, String> m3uEntryMap = {};
         m3uEntryList.forEach((element) {
@@ -131,7 +216,7 @@ class CountriesController extends GetxController {
         print("生成m3u结束 文件保存在$iptvChannelPath");
       });
     });
-    for (final item in selecteds) {
+    for (final item in selectedList) {
       if (item.code == null) {
         continue;
       }
@@ -139,26 +224,30 @@ class CountriesController extends GetxController {
     }
   }
 
+  /// 读取国家列表，根据上次保存的选择列表，修改默认选中状态
   void fetchIptvCountries() async {
     print('storage path = ${await FileUtil().getTmpPath()}');
     print('tmp path = ${await FileUtil().getTmpPath()}');
     print('tmp able path = ${await FileUtil().getTmpAvailablePath()}');
     handleing.value = true;
-    List<String> selectedCountry =
-        SpUtil.getStringList("selected_country") ?? [];
-    print("fetchIptvCountries ${selectedCountry.length}");
-    var content = await ApiService.fetchIptvCountries();
-    if (content.data != null) {
-      countries.value = content.data!.map((element) {
+    // await isolateManager.start();
+    var countryList = await ApiService.loadIptvCountries();
+    if (countryList.data != null) {
+      List<String> selectedCountry =
+          SpUtil.getStringList("selected_country") ?? [];
+      print("fetchIptvCountries ${selectedCountry.length}");
+      countries.value = countryList.data!.map((element) {
         element.selected.value = selectedCountry.contains(element.code);
         return element;
       }).toList();
-      // getSelectedCountriesList().forEach((element) {
-      //   checkEpgUrlByCountry(element.code!.toLowerCase())
-      //       .then((value) => element.hasEpg.value = value);
-      // });
-      getSelectedCountriesList().forEach((element) async {
-        await loadChannelCountToUI(element);
+      if (Config.checkEpg()) {
+        // getSelectedCountriesList().forEach((element) {
+        //   checkEpgUrlByCountry(element.code!.toLowerCase())
+        //       .then((value) => element.hasEpg.value = value);
+        // });
+      }
+      getSelectedCountriesList().forEach((element) {
+        loadChannelCountToUI(element);
       });
       countriesCount.value = countries.length;
     } else {
@@ -166,13 +255,15 @@ class CountriesController extends GetxController {
       countriesCount.value = 0;
     }
     handleing.value = false;
-    // getData();
   }
 
-  Future<void> loadChannelCountToUI(Data element) async {
-    final savePath = await downloadIptvByCountryToLocal(element.code!);
-    element.savePath = savePath;
+  /// 根据国家代码下载m3u文件到临时目录，并解析频道数量
+  void loadChannelCountToUI(Data element) async {
+    final savePath = Config.isCheckRealtime()
+        ? await downloadIptvByCountryToLocal(element.code!)
+        : await downloadIptvDailyUpdateByCountry(element.code!);
     if (savePath.isNotEmpty) {
+      element.savePath = savePath;
       getM3u8FileChannelCount(savePath)
           .then((value) => element.channelCount.value = value);
     }
@@ -188,7 +279,6 @@ class CountriesController extends GetxController {
   }
 
   checkSelectedEpg(List<Data> selectedList) async {
-
     HttpClient httpClient = HttpClient();
     httpClient.connectionTimeout = Duration(milliseconds: 2000);
     for (final item in selectedList) {
@@ -196,7 +286,7 @@ class CountriesController extends GetxController {
         continue;
       }
       print('checkSelectedEpg');
-      item.hasEpg.value = await checkEpgUrlByCountry(httpClient,item.code!.toLowerCase());
+      item.hasEpg.value = await checkEpgUrlByCountry(httpClient, item.code!);
     }
   }
 
@@ -208,7 +298,7 @@ class CountriesController extends GetxController {
       FileUtil().removeFile(item.savePath);
     }
     if (item.selected.value && item.code != null) {
-      await loadChannelCountToUI(item);
+      loadChannelCountToUI(item);
       // countries[index].hasEpg.value =
       //     await checkEpgUrlByCountry(countries[index].code!.toLowerCase());
     }

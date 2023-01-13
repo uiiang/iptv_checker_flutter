@@ -78,7 +78,7 @@ class HandleView extends StatelessWidget {
               enabled: !controller.handleing.value,
               onTap: () {
                 controller.saveData();
-                controller.genM3u8RealTimeCheck();
+                controller.genM3u8();
               },
               child: buildHandleBtn(controller.handleing.value ? '生成中' : '生成',
                   disable: controller.handleing.value),

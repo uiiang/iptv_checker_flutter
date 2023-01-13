@@ -16,9 +16,13 @@ dependencies:
   file_saver: ^0.1.1
   settings_ui: ^2.0.2
   xml: any
+#  isolate_manager: 2.1.0
+  worker_manager: ^4.5.0
   flutter:
     sdk: flutter
 #  collection:
+dependency_overrides:
+  stream_channel: 2.1.1
 
 dev_dependencies: 
   flutter_lints: 2.0.1

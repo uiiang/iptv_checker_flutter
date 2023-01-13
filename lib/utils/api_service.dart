@@ -10,36 +10,52 @@ import '../app/modules/countries/countries_model.dart';
 class ApiService {
   static const _TAG = 'ApiService';
 
-  static Future<String> fetchIptvEpg(String flag) async {
+  static Future<String> fetchIptvEpg(String code) async {
     //https://iptv-org.github.io/epg/guides/af.xml
     var response =
-        await Dio().get('https://iptv-org.github.io/epg/guides/$flag.xml');
+        await Dio().get('https://iptv-org.github.io/epg/guides/$code.xml');
     return response.toString();
   }
 
-  static Future<String> downloadIptvByCountry(String flag) async {
-    final savepath =
-        '${await FileUtil().getDirectory()}/tmp/source/${flag.toLowerCase()}.m3u';
-    final response = await Dio().download(
-        "https://iptv-org.github.io/iptv/countries/${flag.toLowerCase()}.m3u",
-        savepath);
+  static Future<String> downloadIptvDailyUpdateByCountry(String code) async {
+    // final url =
+    //     "https://ghproxy.net/https://raw.githubusercontent.com/iptv-org/iptv/master/streams/$code.m3u";
+    // final url = "https://github.com/iptv-org/iptv/blob/master/streams/$code.m3u";
+    // final url = "https://jsd.cdn.zzko.cn/gh/iptv-org/iptv@master/streams/$code.m3u";
+    final url = "https://raw.fastgit.org/iptv-org/iptv/master/streams/$code.m3u";
+    // final url = "https://raw.kgithub.com/iptv-org/iptv/master/streams/$code.m3u";
+    final savePath =
+        '${await FileUtil().getDirectory()}/tmp/source/daily_$code.m3u';
+    print('downloadIptvDailyUpdateByCountry code $code');
+    final response = await Dio().download(url, savePath);
     if (response.statusCode == 200) {
-      return savepath;
+      return savePath;
     } else {
       return "";
     }
   }
 
-  static Future<String> fetchIptvByCountry(String flag) async {
+  static Future<String> downloadIptvByCountry(String code) async {
+    final savePath = '${await FileUtil().getDirectory()}/tmp/source/$code.m3u';
+    final response = await Dio().download(
+        "https://iptv-org.github.io/iptv/countries/$code.m3u", savePath);
+    if (response.statusCode == 200) {
+      return savePath;
+    } else {
+      return "";
+    }
+  }
+
+  static Future<String> fetchIptvByCountry(String code) async {
     //  https://iptv-org.github.io/iptv/countries/af.m3u
     // https://raw.fastgit.org/iptv-org/iptv/master/streams/cn_cctv.m3u
-    var response = await Dio().get(
-        "https://iptv-org.github.io/iptv/countries/${flag.toLowerCase()}.m3u");
+    var response =
+        await Dio().get("https://iptv-org.github.io/iptv/countries/$code.m3u");
     // print('response $response');
     return response.toString();
   }
 
-  static Future<Countries> fetchIptvCountries() async {
+  static Future<Countries> loadIptvCountries() async {
     //  https://iptv-org.github.io/api/countries.json
     // var response = await Dio().get(
     //     "https://iptv-org.github.io/api/categories.json");
@@ -47,7 +63,7 @@ class ApiService {
     return Countries.fromJson(json.decode(response.toString()));
   }
 
-  static Future<Categories> fetchIptvCategories() async {
+  static Future<Categories> loadIptvCategories() async {
     //  https://iptv-org.github.io/api/categories.json
     //   var response = await Dio().get(
     //       "https://iptv-org.github.io/api/categories.json");

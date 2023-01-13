@@ -13,7 +13,7 @@ class CategoriesController extends GetxController {
   }
 
   void fetchIptvCategories() async {
-    var content = await ApiService.fetchIptvCategories();
+    var content = await ApiService.loadIptvCategories();
     // LogUtil.d(content.data?.length, tag: _TAG);
     categories.value = content;
   }

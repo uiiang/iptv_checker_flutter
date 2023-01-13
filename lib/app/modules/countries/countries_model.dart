@@ -32,10 +32,10 @@ class Data {
   Data({this.name, this.code, this.languages, this.flag});
 
   Data.fromJson(Map<String, dynamic> json) {
-    name = json['name'];
-    code = json['code'];
+    name = json['name'].toString().toLowerCase();
+    code = json['code'].toString().toLowerCase();
     languages = json['languages'].cast<String>();
-    flag = json['flag'];
+    flag = json['flag'].toString().toLowerCase();
   }
 
   Map<String, dynamic> toJson() {

@@ -103,7 +103,7 @@ String createM3uContent(M3uGenericEntry m3uItem) {
 }
 
 // 检查m3u文件中的status，返回online的数据，
-// 不通过http请求测试连通性，速度快，但有些文件中没有status
+// 不通过http请求测试连通性，速度快，但有些文件中没有status标签
 Future<List<M3uGenericEntry>> getOnlineChannel(m3uData) async {
   final listOfTracks = await parseFile(m3uData);
   final statusList =
@@ -111,19 +111,33 @@ Future<List<M3uGenericEntry>> getOnlineChannel(m3uData) async {
   return statusList['online'] ?? [];
 }
 
+Future<List<M3uGenericEntry>> getOnlineChannelLocal(String path) async {
+  print('getOnlineChannelLocal $path');
+  final content = await FileUtil().loadFileContent(path);
+  final listOfTracks = await parseFile(content);
+  final statusList =
+  sortedCategories(entries: listOfTracks, attributeName: 'status');
+  return statusList['online'] ?? [];
+}
+
+
+
 Future<List<M3uGenericEntry>> getM3u8FileChannelListLocal(String path) async {
   final content = await FileUtil().loadFileContent(path);
   return await M3uParser.parse(content);
 }
 
 Future<int> getM3u8FileChannelCount(String path) async {
-  final content = await FileUtil().loadFileContent(path);
-  return (await M3uParser.parse(content)).length;
+  final entryList = await getM3u8FileChannelListLocal(path);
+  return entryList.length;
+}
+
+Future<String> downloadIptvDailyUpdateByCountry(String code) async {
+  return await ApiService.downloadIptvDailyUpdateByCountry(code);
 }
 
 Future<String> downloadIptvByCountryToLocal(String code) async {
-  String savePath = await ApiService.downloadIptvByCountry(code);
-  return savePath;
+  return await ApiService.downloadIptvByCountry(code);
 }
 
 Future<List<M3uGenericEntry>> getChannelList(Data data) async {
@@ -173,7 +187,7 @@ Stream<M3uGenericEntry?> getAvailableChannelByCountryCode(httpClient,
   // return channelData;
 }
 
-Future<List<M3uGenericEntry>> getOnlineChannelByCountryCode(String code) async {
+Future<List<M3uGenericEntry>> fetchOnlineChannelByCountryCode(String code) async {
   String m3uData = await ApiService.fetchIptvByCountry(code);
   List<M3uGenericEntry> channelData = await getOnlineChannel(m3uData);
   return channelData;
