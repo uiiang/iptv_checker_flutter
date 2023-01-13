@@ -7,7 +7,7 @@ import 'package:settings_ui/settings_ui.dart';
 import '../../countries/views/countries_view.dart';
 import '../controllers/home_controller.dart';
 
-class HomeView extends GetView<HomeController> {
+class HomeView extends StatelessWidget {
   const HomeView({Key? key}) : super(key: key);
   Container buildSetting(){
     return Container(
@@ -45,18 +45,18 @@ class HomeView extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     CountriesController controller = Get.put(CountriesController());
-    // CountriesController controller = Get.find();
-
     return Scaffold(
         appBar: AppBar(
-          title: Obx(() => Text(controller.getSelectedCount() == 0
-              ? "请在左侧选择"
-              : "已选择${controller.getSelectedCount()}个频道")),
+          title:Text("请在左侧选择"),
+          // title: Obx(() => Text(controller.getSelectedCount() == 0
+          //     ? "请在左侧选择"
+          //     : "已选择${controller.getSelectedCount()}个频道")),
           centerTitle: true,
         ),
         // body: CountriesView(),
         body: Row(
           children: [
+            // Text("data"),
             Obx(() {
               return AspectRatio(
                   aspectRatio: 1,

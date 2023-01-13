@@ -14,35 +14,6 @@ class HandleView extends StatelessWidget {
   Widget build(BuildContext context) {
     CountriesController controller = Get.put(CountriesController());
 
-    final settingPanel = SettingsList(
-      contentPadding: EdgeInsets.zero,
-      sections: [
-        SettingsSection(
-          // margin: EdgeInsetsDirectional.all(5),
-          title: const Text('设置'),
-          tiles: <SettingsTile>[
-            SettingsTile.navigation(
-              description: const Text("超时设置越长，可能检测到更多频道，但检测时间长，收看时容易卡顿"),
-              title: const Text(
-                '超时',
-                style: TextStyle(fontSize: 14),
-              ),
-              value: const Text('English', style: TextStyle(fontSize: 14)),
-            ),
-            SettingsTile.switchTile(
-              onToggle: (value) {},
-              description: const Text("自动下载epg文件，用于显示电视节目表"),
-              initialValue: true,
-              title: const Text(
-                '生成epg',
-                style: TextStyle(fontSize: 14),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-
     final selectedListPanel = Obx(() {
       final selectList = controller.getSelectedCountriesList();
       // controller.checkSelectedEpg(selectList);
@@ -63,24 +34,20 @@ class HandleView extends StatelessWidget {
                   title: getCountryItemRow(item, fontSize: 12.0),
                   subtitle: Obx(() {
                     return Text(
-                      item.status.value,
+                      '${item.channelCount.value}个频道 ${item.status.value}',
                       style: const TextStyle(fontSize: 12),
                     );
                   }),
-                  trailing: Container(
-                    // color: Colors.red,
-                    // height: 80,
-                    child: Obx(() => Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            // buildEpgFlag(item.hasEpg.value),
-                            buildStatusPanel(
-                                item.okCount.value.toString(), 'ok'),
-                            buildStatusPanel(
-                                item.errorCount.value.toString(), 'error'),
-                          ],
-                        )),
-                  )));
+                  trailing: Obx(() => Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          // buildEpgFlag(item.hasEpg.value),
+                          buildStatusPanel(
+                              item.okCount.value.toString(), 'ok'),
+                          buildStatusPanel(
+                              item.errorCount.value.toString(), 'error'),
+                        ],
+                      ))));
         },
       );
     });
@@ -111,7 +78,7 @@ class HandleView extends StatelessWidget {
               enabled: !controller.handleing.value,
               onTap: () {
                 controller.saveData();
-                controller.genM3u8();
+                controller.genM3u8RealTimeCheck();
               },
               child: buildHandleBtn(controller.handleing.value ? '生成中' : '生成',
                   disable: controller.handleing.value),

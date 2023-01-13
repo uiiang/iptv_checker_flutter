@@ -8,34 +8,64 @@ import 'package:iptv_checker_flutter/utils/api_service.dart';
 import 'package:m3u_nullsafe/m3u_nullsafe.dart';
 import 'package:xml/xml.dart';
 
-Future<int> checkUrlHttpClient(url, {timeout = 2000}) async {
-  var start = DateTime.now();
-  // print('checkUrlHttpClient $url');
-  // final client = RetryClient(http.Client(), retries: retryTime);
-  // try {
-  //   client.get(Uri.parse(url));
-  // } finally {
-  //   client.close();
-  // }
+import '../app/modules/countries/countries_model.dart';
+import 'file_util.dart';
+
+Future<bool> checkUrlHttpClient(HttpClient httpClient, url, {timeout = 2000}) async {
+  // var start = DateTime.now();
   try {
-    HttpClient httpClient = HttpClient();
-    httpClient.connectionTimeout = Duration(milliseconds: timeout);
+    // HttpClient httpClient = HttpClient();
+    // httpClient.connectionTimeout = Duration(milliseconds: timeout);
     HttpClientRequest request = await httpClient.getUrl(Uri.parse(url));
     HttpClientResponse response = await request.close();
+    // if (response.statusCode == 200) {
+    //   final diff = getDiff(start);
+    //   // print('checkUrlHttpClient ok duration:$diff');
+    //   return diff;
+    // } else {
+    //   final diff = getDiff(start);
+    //   print(
+    //       'checkUrlHttpClient error duration:$diff statusCode:${response.statusCode} ');
+    //   return -1;
+    // }
+    print('check $url response status code ${response.statusCode}');
+    return response.statusCode == 200;
+  } catch (e) {
+    // final diff = getDiff(start);
+    // print('onError duration:$diff expetion $e');
+    print('check $url exception $e');
+    return false;
+  }
+}
+
+
+// dio的超时设置无效，使用checkUrlHttpClient方法来检测
+Future<bool> checkUrl(url, {timeout = 2000}) async {
+  // var start = DateTime.now();
+  // print('start $start');
+
+  try {
+    print('start check $url');
+    final response = await Dio()
+        .request(url, options: Options(sendTimeout: 1, receiveTimeout: timeout));
     if (response.statusCode == 200) {
-      final diff = getDiff(start);
-      // print('checkUrlHttpClient ok duration:$diff');
-      return diff;
+      // final diff = getDiff(start);
+      // return start
+      //     .difference(s)
+      //     .inSeconds;
+      print('$url is available');
+      return true;
     } else {
-      final diff = getDiff(start);
-      print(
-          'checkUrlHttpClient error duration:$diff statusCode:${response.statusCode} ');
-      return -1;
+      // final diff = getDiff(start);
+      // print(
+      //     'checkUrlHttpClient error duration:$diff statusCode:${response.statusCode} ');
+      print('$url is wrong status ${response.statusCode}');
+      return false;
     }
   } catch (e) {
-    final diff = getDiff(start);
-    print('onError duration:$diff expetion $e');
-    return -1;
+    // final diff = getDiff(start);
+    print('$url is onError expetion $e');
+    return false;
   }
 }
 
@@ -43,36 +73,6 @@ int getDiff(DateTime start) {
   var end = DateTime.now().millisecondsSinceEpoch;
   var s = DateTime.fromMillisecondsSinceEpoch(end);
   return s.difference(start).inMilliseconds;
-}
-
-// dio的超时设置无效，使用checkUrlHttpClient方法来检测
-Future<bool> checkUrl(url) async {
-  var start = DateTime.now();
-  try {
-    final response = await Dio()
-        .get(url, options: Options(sendTimeout: 1, receiveTimeout: 1),
-            onReceiveProgress: (count, total) {
-      print('count $count total $total');
-    });
-    if (response.statusCode == 200) {
-      var end = DateTime.now().millisecondsSinceEpoch;
-      var s = DateTime.fromMillisecondsSinceEpoch(end);
-      print(' is ok ${s.difference(start).inMilliseconds}');
-      // return start
-      //     .difference(s)
-      //     .inSeconds;
-      return true;
-    }
-  } catch (e) {
-    print(e);
-    var end = DateTime.now().millisecondsSinceEpoch;
-    var s = DateTime.fromMillisecondsSinceEpoch(end);
-    print('ontimeout ${s.difference(start).inMilliseconds}');
-    // return -1;
-    return false;
-  }
-  // return -1;
-  return false;
 }
 
 Future<String> saveM3u8File(content, filename, ext) async {
@@ -90,13 +90,15 @@ String createM3uContent(M3uGenericEntry m3uItem) {
 // #EXTINF:-1 tvg-id="AnhuiSatelliteTV.cn" status="online",安徽卫视 (1080p)
 // http://39.134.115.163:8080/PLTV/88888910/224/3221225691/index.m3u8
   String content = "";
-  // for (final item in m3uItem) {
-  final tvgid = 'tvg-id="${m3uItem.attributes["tvg-id"]}"';
-  final status = 'status="${m3uItem.attributes["status"]}"';
+  final attrStr = m3uItem.attributes.entries.map((e) {
+    return '${e.key}="${e.value}"';
+  }).toList().join(" ");
+  // final tvgid = 'tvg-id="${m3uItem.attributes["tvg-id"]}"';
+  // final status = 'status="${m3uItem.attributes["status"]}"';
   final title = m3uItem.title;
-  content += '#EXTINF:-1 $tvgid $status,$title\n';
+  content += '#EXTINF:-1 $attrStr ,$title\n';
   content += '${m3uItem.link}\n';
-  // }
+
   return content;
 }
 
@@ -109,19 +111,29 @@ Future<List<M3uGenericEntry>> getOnlineChannel(m3uData) async {
   return statusList['online'] ?? [];
 }
 
-Stream<List<M3uGenericEntry>> getAvailableChannel(m3uData) async* {
-  List<M3uGenericEntry> availableList = [];
-  final listOfTracks = await parseFile(m3uData);
-  const timeout = 2000;
-  // for (final item in listOfTracks) {
-  for (var item in listOfTracks) {
-    final duration = await checkUrlHttpClient(item.link, timeout: timeout);
-    if (duration > 0 && timeout > duration) {
-      availableList.add(item);
-    }
-    yield availableList;
+Future<List<M3uGenericEntry>> getM3u8FileChannelListLocal(String path) async {
+  final content = await FileUtil().loadFileContent(path);
+  return await M3uParser.parse(content);
+}
+
+Future<int> getM3u8FileChannelCount(String path) async {
+  final content = await FileUtil().loadFileContent(path);
+  return (await M3uParser.parse(content)).length;
+}
+
+Future<String> downloadIptvByCountryToLocal(String code) async {
+  String savePath = await ApiService.downloadIptvByCountry(code);
+  return savePath;
+}
+
+Future<List<M3uGenericEntry>> getChannelList(Data data) async {
+  bool local = await FileUtil().fileIsExists(data.savePath);
+  if (local) {
+    return await getM3u8FileChannelListLocal(data.savePath);
+  } else {
+    final savePath = await downloadIptvByCountryToLocal(data.code!);
+    return await getM3u8FileChannelListLocal(savePath);
   }
-  // return availableList;
 }
 
 Future<List<M3uGenericEntry>> getChannelByCountryCode(String code) async {
@@ -129,13 +141,30 @@ Future<List<M3uGenericEntry>> getChannelByCountryCode(String code) async {
   return await parseFile(m3uData);
 }
 
-Stream<M3uGenericEntry?> getAvailableChannelByCountryCode(
+Stream<List<M3uGenericEntry>> getAvailableChannel(m3uData,httpClient) async* {
+  List<M3uGenericEntry> availableList = [];
+  final listOfTracks = await parseFile(m3uData);
+  const timeout = 2000;
+  // for (final item in listOfTracks) {
+  for (var item in listOfTracks) {
+    final duration = await checkUrlHttpClient(httpClient,item.link, timeout: timeout);
+    // if (duration > 0 && timeout > duration) {
+    //   availableList.add(item);
+    // }
+    if (duration){
+      availableList.add(item);
+    }
+    yield availableList;
+  }
+  // return availableList;
+}
+
+Stream<M3uGenericEntry?> getAvailableChannelByCountryCode(httpClient,
     List<M3uGenericEntry> listOfTracks) async* {
   const timeout = 2000;
   for (final item in listOfTracks) {
-    final duration = await checkUrlHttpClient(item.link, timeout: timeout);
-    if (duration > 0 && timeout > duration) {
-      // availableList.add(item);
+    final available = await checkUrlHttpClient(httpClient,item.link, timeout: timeout);
+    if (available) {
       yield item;
     } else {
       yield null;
@@ -151,12 +180,12 @@ Future<List<M3uGenericEntry>> getOnlineChannelByCountryCode(String code) async {
 }
 
 // 检测该国家code是否包含epg文件
-Future<bool> checkEpgUrlByCountry(String code) async {
+Future<bool> checkEpgUrlByCountry(httpClient,String code) async {
   const timeout = 5000;
-  final sec = await checkUrlHttpClient(
+  final sec = await checkUrlHttpClient(httpClient,
       'https://iptv-org.github.io/epg/guides/$code.xml',
       timeout: timeout);
-  return sec > 0 && timeout > sec;
+  return sec;
 }
 
 Future<XmlDocument> getEpgByCountryCode(String code) async {

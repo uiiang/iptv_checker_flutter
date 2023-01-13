@@ -1,12 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flustars/flustars.dart';
 import 'package:get/get.dart';
 import 'package:iptv_checker_flutter/app/modules/countries/countries_model.dart';
 import 'package:iptv_checker_flutter/utils/api_service.dart';
+import 'package:iptv_checker_flutter/utils/file_util.dart';
 import 'package:iptv_checker_flutter/utils/log_util.dart';
 import 'package:iptv_checker_flutter/utils/m3u8_helper.dart';
-import 'package:m3u_nullsafe/m3u_nullsafe.dart';
 
 class CountriesController extends GetxController {
   static const _TAG = 'CountriesController';
@@ -31,7 +32,11 @@ class CountriesController extends GetxController {
     setting.value = !setting.value;
   }
 
-  void genM3u8() async {
+  void genM3u8RealTimeCheck() async {
+
+    HttpClient httpClient = HttpClient();
+    httpClient.connectionTimeout = Duration(milliseconds: 2000);
+    FileUtil().removeDir(await FileUtil().getTmpPath());
     handleing.value = true;
     Iterable<Data> selecteds = getSelectedCountriesList().map((e) {
       e.status.value = "等待中...";
@@ -40,62 +45,91 @@ class CountriesController extends GetxController {
 
     if (selecteds.isEmpty) {
       print('开始生成m3u8文件，无选中的国家，停止生成');
+      handleing.value = false;
       return;
     }
     print('共选择${selecteds.length}个国家频道');
     StreamController<Data> dataController = StreamController();
     Stream<Data> stream = dataController.stream;
-    List<M3uGenericEntry> allCodeEntry = [];
+    // final tmpAllAvailablePath =
+    //     '${await FileUtil().getTmpPath()}/all_available.m3u';
+    File tmpAllAvailableFile = await FileUtil()
+        .getOrCreateFile(await FileUtil().getTmpPath(), "all_available.m3u");
+    final tmpAllAvailablePath = tmpAllAvailableFile.path;
+    FileUtil().writeStringToFileAppend(tmpAllAvailableFile, '#EXTM3U\n');
+    // List<M3uGenericEntry> allCodeEntry = [];
     int doneCount = 0;
     stream.listen((item) async {
       print("开始检测${item.name}的频道");
       item.status.value = "开始检测...";
-      final listOfTracks = await getChannelByCountryCode(item.code!);
+      //解析m3u文件到list，如果本地有保存文件直接解析，如果没有重新下载再解析
+      final listOfTracks = await getChannelList(item);
       item.channelCount.value = listOfTracks.length;
-      List<M3uGenericEntry> currCodeEntry = [];
+      // List<M3uGenericEntry> currCodeEntry = [];
       int errorCount = 0;
-      getAvailableChannelByCountryCode(listOfTracks).listen((availableChannel) {
+      int okCount = 0;
+      final availablePath =
+          '${await FileUtil().getTmpAvailablePath()}/${item.code!.toLowerCase()}.m3u';
+      item.availablePath = availablePath;
+      print('availablePath $availablePath');
+      File currentAllAvailableFile = File(availablePath);
+      FileUtil().writeStringToFileAppend(currentAllAvailableFile, '#EXTM3U\n');
+      getAvailableChannelByCountryCode(httpClient,listOfTracks).listen((availableChannel) {
         if (availableChannel != null) {
-          currCodeEntry.add(availableChannel);
-          print("${item.name}找到第${currCodeEntry.length}个可用的频道");
+          FileUtil().writeStringToFileAppend(
+              currentAllAvailableFile, createM3uContent(availableChannel));
+          okCount += 1;
         } else {
           errorCount += 1;
         }
-        item.okCount.value = currCodeEntry.length;
+        item.okCount.value = okCount;
         item.errorCount.value = errorCount;
         item.status.value = "正在检测...";
       }, onError: (err) {
         print('check ${item.name}频道发生错误, $err');
       }).onDone(() {
-        if (currCodeEntry.isNotEmpty) {
-          print("${item.name}完成检测,${currCodeEntry.length}个可用的频道");
+        if (item.okCount.value > 0) {
+          print("${item.name}完成检测,${item.okCount.value}个可用的频道");
           item.status.value = "完成检测";
-          allCodeEntry.addAll(currCodeEntry);
+          // allCodeEntry.addAll(currCodeEntry);
         } else {
           item.status.value = "完成检测-无可用频道";
         }
-
-        doneCount += 1;
-        if (doneCount == selecteds.length) {
-          dataController.close();
-        }
+        getM3u8FileChannelListLocal(item.availablePath)
+            .then((m3uEntryList) async {
+          List<String> currentAbleContent = m3uEntryList
+              .map((entry) => createM3uContent(entry))
+              .toSet()
+              .toList();
+          await FileUtil().writeStringToFileAppend(
+              tmpAllAvailableFile, currentAbleContent.join(""));
+          // FileUtil().writeStringToFileOnce(tmpAllAvailableFile, content.join(""));
+        }).then((value) {
+          doneCount += 1;
+          if (doneCount == selecteds.length) {
+            dataController.close();
+          }
+        });
       });
     }, onError: (e) {
       print('check all onError $e');
     }, onDone: () async {
-      Iterable<String> content = allCodeEntry
-          .map((entry) {
-            return createM3uContent(entry);
-          })
-          .toSet()
-          .toList();
-
-      print('全部频道检测完毕 ${allCodeEntry.length}个可用频道, 去重后${content.length}');
-      print("开始制作m3u8文件");
-      String path = await saveM3u8File(
-          "#EXTM3U\n${content.join("")}", "iptv_channel", "m3u");
-      print("生成m3u结束 文件保存在$path");
-      handleing.value = false;
+      final iptvChannelPath =
+          '${await FileUtil().getDirectory()}/iptv_channel.m3u';
+      await FileUtil().removeFile(iptvChannelPath);
+      getM3u8FileChannelListLocal(tmpAllAvailablePath)
+          .then((m3uEntryList) async {
+        Map<String, String> m3uEntryMap = {};
+        m3uEntryList.forEach((element) {
+          m3uEntryMap[element.link] = createM3uContent(element);
+        });
+        print('全部频道检测完毕 ${m3uEntryList.length}个可用频道, 去重后${m3uEntryMap.length}');
+        print("开始制作m3u8文件...");
+        await FileUtil().writeStringToFileOnce(
+            File(iptvChannelPath), '#EXTM3U\n${m3uEntryMap.values.join("")}');
+        handleing.value = false;
+        print("生成m3u结束 文件保存在$iptvChannelPath");
+      });
     });
     for (final item in selecteds) {
       if (item.code == null) {
@@ -106,6 +140,9 @@ class CountriesController extends GetxController {
   }
 
   void fetchIptvCountries() async {
+    print('storage path = ${await FileUtil().getTmpPath()}');
+    print('tmp path = ${await FileUtil().getTmpPath()}');
+    print('tmp able path = ${await FileUtil().getTmpAvailablePath()}');
     handleing.value = true;
     List<String> selectedCountry =
         SpUtil.getStringList("selected_country") ?? [];
@@ -116,9 +153,12 @@ class CountriesController extends GetxController {
         element.selected.value = selectedCountry.contains(element.code);
         return element;
       }).toList();
-      getSelectedCountriesList().forEach((element) {
-        checkEpgUrlByCountry(element.code!.toLowerCase())
-            .then((value) => element.hasEpg.value = value);
+      // getSelectedCountriesList().forEach((element) {
+      //   checkEpgUrlByCountry(element.code!.toLowerCase())
+      //       .then((value) => element.hasEpg.value = value);
+      // });
+      getSelectedCountriesList().forEach((element) async {
+        await loadChannelCountToUI(element);
       });
       countriesCount.value = countries.length;
     } else {
@@ -129,30 +169,48 @@ class CountriesController extends GetxController {
     // getData();
   }
 
+  Future<void> loadChannelCountToUI(Data element) async {
+    final savePath = await downloadIptvByCountryToLocal(element.code!);
+    element.savePath = savePath;
+    if (savePath.isNotEmpty) {
+      getM3u8FileChannelCount(savePath)
+          .then((value) => element.channelCount.value = value);
+    }
+  }
+
   void clearSelect() {
     countries.value = countries.map((element) {
       element.selected.value = false;
+      FileUtil().removeFile(element.availablePath);
+      FileUtil().removeFile(element.savePath);
       return element;
     }).toList();
   }
 
   checkSelectedEpg(List<Data> selectedList) async {
+
+    HttpClient httpClient = HttpClient();
+    httpClient.connectionTimeout = Duration(milliseconds: 2000);
     for (final item in selectedList) {
       if (item.hasEpg.value) {
         continue;
       }
       print('checkSelectedEpg');
-      item.hasEpg.value = await checkEpgUrlByCountry(item.code!.toLowerCase());
+      item.hasEpg.value = await checkEpgUrlByCountry(httpClient,item.code!.toLowerCase());
     }
   }
 
   void selectItem(int index) async {
-    // LU.d('selectitem $selected $index',tag: _TAG);
-    countries[index].selected.value = !countries[index].selected.value;
-    if (countries[index].selected.value && countries[index].code != null) {
-      print('selectItem');
-      countries[index].hasEpg.value =
-          await checkEpgUrlByCountry(countries[index].code!.toLowerCase());
+    final item = countries[index];
+    item.selected.value = !item.selected.value;
+    if (item.selected.isFalse) {
+      FileUtil().removeFile(item.availablePath);
+      FileUtil().removeFile(item.savePath);
+    }
+    if (item.selected.value && item.code != null) {
+      await loadChannelCountToUI(item);
+      // countries[index].hasEpg.value =
+      //     await checkEpgUrlByCountry(countries[index].code!.toLowerCase());
     }
   }
 

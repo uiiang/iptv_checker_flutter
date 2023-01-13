@@ -26,6 +26,8 @@ class Data {
   final okCount = 0.obs;
   final errorCount = 0.obs;
   final channelCount = 0.obs;
+  String savePath = "";
+  String availablePath = "";
 
   Data({this.name, this.code, this.languages, this.flag});
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
+import 'package:iptv_checker_flutter/utils/file_util.dart';
 
 import '../app/modules/categories/categories_model.dart';
 import '../app/modules/countries/countries_model.dart';
@@ -14,6 +15,19 @@ class ApiService {
     var response =
         await Dio().get('https://iptv-org.github.io/epg/guides/$flag.xml');
     return response.toString();
+  }
+
+  static Future<String> downloadIptvByCountry(String flag) async {
+    final savepath =
+        '${await FileUtil().getDirectory()}/tmp/source/${flag.toLowerCase()}.m3u';
+    final response = await Dio().download(
+        "https://iptv-org.github.io/iptv/countries/${flag.toLowerCase()}.m3u",
+        savepath);
+    if (response.statusCode == 200) {
+      return savepath;
+    } else {
+      return "";
+    }
   }
 
   static Future<String> fetchIptvByCountry(String flag) async {
