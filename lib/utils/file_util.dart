@@ -20,7 +20,6 @@ class FileUtil {
   }
 
   Future<File?> writeStringToFileAppend(File file, String appendContent) async {
-    // File file = File(path);
     try {
       return await file.writeAsString(appendContent,
           mode: FileMode.append, flush: true);

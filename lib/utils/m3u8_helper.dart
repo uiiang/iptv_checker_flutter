@@ -121,6 +121,10 @@ Future<List<M3uGenericEntry>> getOnlineChannelLocal(String path) async {
 }
 
 
+Future<List<M3uGenericEntry>> getM3u8FileChannelListLocalFile(File file) async {
+  final content = await file.readAsString();
+  return await M3uParser.parse(content);
+}
 
 Future<List<M3uGenericEntry>> getM3u8FileChannelListLocal(String path) async {
   final content = await FileUtil().loadFileContent(path);
