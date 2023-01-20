@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:iptv_checker_flutter/config.dart';
 import 'package:iptv_checker_flutter/utils/api_service.dart';
 import 'package:m3u/m3u.dart';
 import 'package:xml/xml.dart';
@@ -261,4 +262,10 @@ Future<bool> writeM3uEntryListToFile(
     print('genFinalM3uFile 生成文件出错 $e');
     return false;
   }
+}
+
+Future<String> downloadIptvFile(String code) async {
+  return Config.isCheckRealtime()
+      ? await downloadIptvByCountryToLocal(code)
+      : await downloadIptvDailyUpdateByCountry(code);
 }

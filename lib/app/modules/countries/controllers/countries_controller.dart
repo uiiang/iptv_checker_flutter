@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flustars/flustars.dart';
 import 'package:get/get.dart';
@@ -18,28 +17,6 @@ class StatusInfo {
   int okCount = 0;
   int errorCount = 0;
   List<M3uGenericEntry> onlineEntryList = [];
-}
-
-void checkRealtimeAvailable(HttpClient httpClient, String savePath, String code,
-    File currentAllAvailableFile, TypeSendPort port) async {
-  final listOfTracks = await getChannelList(savePath, code);
-  FileUtil().writeStringToFileAppend(currentAllAvailableFile, '#EXTM3U\n');
-
-  // return getAvailableChannelByCountryCode(httpClient, listOfTracks);
-  getAvailableChannelByCountryCode(httpClient, listOfTracks)
-      .listen((availableChannel) {
-    if (availableChannel.available) {
-      FileUtil().writeStringToFileAppend(
-          currentAllAvailableFile, createM3uContent(availableChannel.entry));
-      print(
-          'getAvailableChannelByCountryCode ok ${availableChannel.entry.title}');
-      // statusInfo.okCount += 1;
-    } else {
-      print('getAvailableChannelByCountryCode error');
-      // statusInfo.errorCount += 1;
-    }
-  });
-  // return statusInfo;
 }
 
 Future<StatusInfo> checkStatusOnline(
@@ -96,15 +73,23 @@ class CountriesController extends GetxController {
     super.onClose();
   }
 
+  void toggleSetting() {
+    setting.value = !setting.value;
+  }
+
   void initIsolateCheck() async {
     CheckManager.instance
         .init(isolates: 2, directory: await FileUtil().getTmpPath());
   }
 
-  void toggleSetting() {
-    setting.value = !setting.value;
+  void finshCheckIsolate() async {
+    await Future.delayed(const Duration(seconds: 1));
+    CheckManager.instance.dispose().then((value) {
+      handleing.value = false;
+    });
   }
 
+  /// 生成m3u8文件
   void genM3u8() async {
     FileUtil().removeDir(await FileUtil().getTmpPath());
     handleing.value = true;
@@ -119,20 +104,19 @@ class CountriesController extends GetxController {
       return e;
     });
     print('共选择${selectedList.length}个国家频道');
-    File tmpAllAvailableFile = await FileUtil()
-        .getOrCreateFile(await FileUtil().getTmpPath(), "all_available.m3u");
-    FileUtil().writeStringToFileAppend(tmpAllAvailableFile, '#EXTM3U\n');
     if (Config.isCheckRealtime()) {
       print('使用实时检测');
-      // genM3u8RealTimeCheck(tmpAllAvailableFile, selectedList);
       initIsolateCheck();
       final availablePath = await FileUtil().getTmpAvailablePath();
       List<M3uGenericEntry> allAbleEntryList = [];
+      // 将选中的国家代码加载到线程中等待检测
       selectedList.forEach((element) async {
         final request = CheckManager.instance.check(
-            await getM3u8FileChannelListLocal(element.savePath),
-            path: '$availablePath/${element.code}.m3u');
+          await getM3u8FileChannelListLocal(element.savePath),
+          // path: '$availablePath/${element.code}.m3u'
+        );
 
+        // 监听检测状态
         request.events.listen((event) async {
           if (event is CheckState) {
             print("event: $event");
@@ -143,23 +127,17 @@ class CountriesController extends GetxController {
               case CheckState.finished:
                 print('${element.name}检测完毕1');
                 element.status.value = '检测完毕';
-                // final entryList = await getM3u8FileChannelListLocal(
-                // '$availablePath/${element.code}.m3u');
-                // print('${element.name} list ${entryList.length}');
-                // allAbleEntryList.addAll(entryList);
-                // print('allEntryList ${allAbleEntryList.length}');
                 break;
               case CheckState.allFinished:
                 print('全部检测完毕1');
-                finshCheckIsolate();
+                finshCheckIsolate(); //关闭检测线程
+                //将可用数据保存到文件
                 final iptvChannelPath =
                     '${await FileUtil().getDirectory()}/iptv_channel.m3u';
                 writeM3uEntryListToFile(allAbleEntryList, iptvChannelPath);
                 break;
             }
           } else if (event is ProgressStatus) {
-            // print("progress: ${(event * 100.0).toStringAsFixed(0)}%");
-            // print("queue ${CheckManager.instance.queue.length}");
             if (event.taskState == TaskState.success) {
               element.okCount.value += 1;
               allAbleEntryList.add(event.channel!);
@@ -169,19 +147,18 @@ class CountriesController extends GetxController {
           }
         }, onError: (error) {
           element.status.value = '检测出错';
-          if (CheckManager.instance.queue.isEmpty) {
-            finshCheckIsolate();
-          }
+          finshCheckIsolate();
         }, onDone: () async {
           print('${element.name}检测完毕2');
           element.status.value = '检测完毕';
-          if (CheckManager.instance.queue.isEmpty) {
-            finshCheckIsolate();
-          }
+          finshCheckIsolate();
         });
       });
     } else {
       print('使用状态检测');
+      File tmpAllAvailableFile = await FileUtil()
+          .getOrCreateFile(await FileUtil().getTmpPath(), "all_available.m3u");
+      FileUtil().writeStringToFileAppend(tmpAllAvailableFile, '#EXTM3U\n');
       genM3u8StatusCheck(tmpAllAvailableFile, selectedList);
     }
   }
@@ -235,158 +212,6 @@ class CountriesController extends GetxController {
     print('genM3u8StatusCheck4');
   }
 
-  void genM3u8RealTimeCheck(tmpAllAvailableFile, selectedList) async {
-    HttpClient httpClient = HttpClient();
-    httpClient.connectionTimeout = const Duration(milliseconds: 2000);
-    StreamController<Data> dataController = StreamController();
-    Stream<Data> stream = dataController.stream;
-    int doneCount = 0;
-    stream.listen((item) async {
-      print("开始检测${item.name}的频道");
-      item.status.value = "开始检测...";
-
-      final availablePath =
-          '${await FileUtil().getTmpAvailablePath()}/${item.code}.m3u';
-      item.availablePath = availablePath;
-      File currentAllAvailableFile = File(availablePath);
-      final task = Executor()
-          .execute(
-              arg1: httpClient,
-              arg2: item.savePath,
-              arg3: item.code!,
-              arg4: currentAllAvailableFile,
-              fun4: checkRealtimeAvailable)
-          .then((value) async {
-        // print('value ${(await value).available}}');
-        // print('Executor ${value}');
-        item.status.value = item.okCount.value > 0 ? "完成检测" : "完成检测-无可用频道";
-        // item.okCount.value = value.okCount;
-        // item.errorCount.value = value.errorCount;
-        // doneCount += 1;
-        // if (doneCount == selectedList.length) {
-        //   dataController.close();
-        // }
-      });
-      task.whenComplete(() {
-        print('whenComplete');
-      });
-    }).onDone(() async {
-      final iptvChannelPath =
-          '${await FileUtil().getDirectory()}/iptv_channel.m3u';
-      bool genSuccess =
-          await genChannelToM3uFile(tmpAllAvailableFile.path, iptvChannelPath);
-      if (genSuccess) {
-        handleing.value = false;
-        print("生成m3u结束 文件保存在$iptvChannelPath");
-      } else {
-        print("genM3u8StatusCheck 生成最终文件失败，请重试");
-        handleing.value = false;
-      }
-    });
-
-    for (final item in selectedList) {
-      print('${item.name} savePath ${item.savePath}');
-      dataController.add(item);
-    }
-
-    print('genM3u8StatusCheck4');
-  }
-
-  void finshCheckIsolate() async {
-    await Future.delayed(const Duration(seconds: 1));
-    CheckManager.instance.dispose().then((value) {
-      handleing.value = false;
-    });
-  }
-
-  /// 实时检测m3u8频道是否可用
-  // void genM3u8RealTimeCheck(tmpAllAvailableFile, selectedList) async {
-  //   HttpClient httpClient = HttpClient();
-  //   httpClient.connectionTimeout = const Duration(milliseconds: 2000);
-  //   StreamController<Data> dataController = StreamController();
-  //   Stream<Data> stream = dataController.stream;
-  //   int doneCount = 0;
-  //   stream.listen((item) async {
-  //     print("开始检测${item.name}的频道");
-  //     item.status.value = "开始检测...";
-  //     //解析m3u文件到list，如果本地有保存文件直接解析，如果没有重新下载再解析
-  //     final listOfTracks = await getChannelList(item);
-  //     item.channelCount.value = listOfTracks.length;
-  //     // List<M3uGenericEntry> currCodeEntry = [];
-  //     int errorCount = 0;
-  //     int okCount = 0;
-  //     final availablePath =
-  //         '${await FileUtil().getTmpAvailablePath()}/${item.code}.m3u';
-  //     item.availablePath = availablePath;
-  //     print('availablePath $availablePath');
-  //     File currentAllAvailableFile = File(availablePath);
-  //     FileUtil().writeStringToFileAppend(currentAllAvailableFile, '#EXTM3U\n');
-  //     getAvailableChannelByCountryCode(httpClient, listOfTracks).listen(
-  //         (availableChannel) {
-  //       if (availableChannel != null) {
-  //         FileUtil().writeStringToFileAppend(
-  //             currentAllAvailableFile, createM3uContent(availableChannel));
-  //         okCount += 1;
-  //       } else {
-  //         errorCount += 1;
-  //       }
-  //       item.okCount.value = okCount;
-  //       item.errorCount.value = errorCount;
-  //       item.status.value = "正在检测...";
-  //     }, onError: (err) {
-  //       print('check ${item.name}频道发生错误, $err');
-  //     }).onDone(() {
-  //       if (item.okCount.value > 0) {
-  //         print("${item.name}完成检测,${item.okCount.value}个可用的频道");
-  //         item.status.value = "完成检测";
-  //         // allCodeEntry.addAll(currCodeEntry);
-  //       } else {
-  //         item.status.value = "完成检测-无可用频道";
-  //       }
-  //       getM3u8FileChannelListLocal(item.availablePath)
-  //           .then((m3uEntryList) async {
-  //         List<String> currentAbleContent = m3uEntryList
-  //             .map((entry) => createM3uContent(entry))
-  //             .toSet()
-  //             .toList();
-  //         await FileUtil().writeStringToFileAppend(
-  //             tmpAllAvailableFile, currentAbleContent.join(""));
-  //         // FileUtil().writeStringToFileOnce(tmpAllAvailableFile, content.join(""));
-  //       }).then((value) {
-  //         doneCount += 1;
-  //         if (doneCount == selectedList.length) {
-  //           dataController.close();
-  //         }
-  //       });
-  //     });
-  //   }, onError: (e) {
-  //     print('check all onError $e');
-  //   }, onDone: () async {
-  //     final iptvChannelPath =
-  //         '${await FileUtil().getDirectory()}/iptv_channel.m3u';
-  //     await FileUtil().removeFile(iptvChannelPath);
-  //     getM3u8FileChannelListLocal(tmpAllAvailableFile.path)
-  //         .then((m3uEntryList) async {
-  //       Map<String, String> m3uEntryMap = {};
-  //       m3uEntryList.forEach((element) {
-  //         m3uEntryMap[element.link] = createM3uContent(element);
-  //       });
-  //       print('全部频道检测完毕 ${m3uEntryList.length}个可用频道, 去重后${m3uEntryMap.length}');
-  //       print("开始制作m3u8文件...");
-  //       await FileUtil().writeStringToFileOnce(
-  //           File(iptvChannelPath), '#EXTM3U\n${m3uEntryMap.values.join("")}');
-  //       handleing.value = false;
-  //       print("生成m3u结束 文件保存在$iptvChannelPath");
-  //     });
-  //   });
-  //   for (final item in selectedList) {
-  //     if (item.code == null) {
-  //       continue;
-  //     }
-  //     dataController.add(item);
-  //   }
-  // }
-
   /// 读取国家列表，根据上次保存的选择列表，修改默认选中状态
   void fetchIptvCountries() async {
     print('storage path = ${await FileUtil().getTmpPath()}');
@@ -420,18 +245,6 @@ class CountriesController extends GetxController {
     handleing.value = false;
   }
 
-  /// 根据国家代码下载m3u文件到临时目录，并解析频道数量
-  void loadChannelCountToUI(Data element) async {
-    final savePath = Config.isCheckRealtime()
-        ? await downloadIptvByCountryToLocal(element.code!)
-        : await downloadIptvDailyUpdateByCountry(element.code!);
-    if (savePath.isNotEmpty) {
-      element.savePath = savePath;
-      getM3u8FileChannelCount(savePath)
-          .then((value) => element.channelCount.value = value);
-    }
-  }
-
   void clearSelect() {
     countries.value = countries.map((element) {
       element.selected.value = false;
@@ -443,7 +256,7 @@ class CountriesController extends GetxController {
 
   checkSelectedEpg(List<Data> selectedList) async {
     HttpClient httpClient = HttpClient();
-    httpClient.connectionTimeout = Duration(milliseconds: 2000);
+    httpClient.connectionTimeout = const Duration(milliseconds: 2000);
     for (final item in selectedList) {
       if (item.hasEpg.value) {
         continue;
@@ -453,7 +266,8 @@ class CountriesController extends GetxController {
     }
   }
 
-  void selectItem(int index) async {
+  ///切换是否选择选择一个国家
+  void toggleItem(int index) async {
     final item = countries[index];
     item.selected.value = !item.selected.value;
     if (item.selected.isFalse) {
@@ -461,20 +275,30 @@ class CountriesController extends GetxController {
       FileUtil().removeFile(item.savePath);
     }
     if (item.selected.value && item.code != null) {
+      // 根据国家代码下载m3u文件到临时目录，并解析频道数量
       loadChannelCountToUI(item);
       // countries[index].hasEpg.value =
       //     await checkEpgUrlByCountry(countries[index].code!.toLowerCase());
     }
   }
 
+  /// 根据国家代码下载m3u文件到临时目录，并解析频道数量
+  loadChannelCountToUI(Data item) async {
+    item.savePath = await downloadIptvFile(item.code!);
+    item.channelCount.value = await getM3u8FileChannelCount(item.savePath);
+  }
+
+  /// 选中的国家数量
   int getSelectedCount() {
     return getSelectedCountriesList().length;
   }
 
+  /// 过滤出选中的国家
   List<Data> getSelectedCountriesList() {
     return countries.where((p0) => p0.selected.value).toList();
   }
 
+  /// 过滤出选中的国家代码
   List<String> getSelectedCountriesCodeList() {
     return getSelectedCountriesList()
         .map((e) => e.code)
@@ -482,12 +306,11 @@ class CountriesController extends GetxController {
         .toList();
   }
 
+  /// 将选中的国家代码保存到缓存
   void saveData() {
     LU.d('saveData', tag: _TAG);
     handleing.value = true;
-    // SpUtil.putString('test', 'ddddddd');
     SpUtil.putStringList('selected_country', getSelectedCountriesCodeList());
     handleing.value = false;
-    // SpUtil.putObjectList(key, list)
   }
 }
