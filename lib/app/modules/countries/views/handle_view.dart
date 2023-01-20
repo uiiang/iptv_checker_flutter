@@ -4,6 +4,7 @@ import 'package:iptv_checker_flutter/app/modules/countries/controllers/countries
 import 'package:iptv_checker_flutter/app/modules/countries/views/widget_kit.dart';
 import 'package:iptv_checker_flutter/utils/widget/dpad_detector.dart';
 import 'package:settings_ui/settings_ui.dart';
+import 'package:iptv_check_manager/iptv_check_manager.dart';
 
 class HandleView extends StatelessWidget {
   static const _TAG = 'HandleView';
@@ -42,8 +43,7 @@ class HandleView extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           // buildEpgFlag(item.hasEpg.value),
-                          buildStatusPanel(
-                              item.okCount.value.toString(), 'ok'),
+                          buildStatusPanel(item.okCount.value.toString(), 'ok'),
                           buildStatusPanel(
                               item.errorCount.value.toString(), 'error'),
                         ],
@@ -62,7 +62,8 @@ class HandleView extends StatelessWidget {
                 print('setting ${controller.setting.value}');
                 controller.toggleSetting();
               },
-              child: buildHandleBtn(controller.setting.isFalse?"设置":"关闭设置", disable: controller.handleing.value),
+              child: buildHandleBtn(controller.setting.isFalse ? "设置" : "关闭设置",
+                  disable: controller.handleing.value),
             )),
         //清除
         Obx(() => DPadDetector(

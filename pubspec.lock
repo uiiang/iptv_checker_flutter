@@ -127,13 +127,6 @@ packages:
       url: "https://mirrors.tuna.tsinghua.edu.cn/dart-pub/"
     source: hosted
     version: "6.1.4"
-  file_saver:
-    dependency: "direct main"
-    description:
-      name: file_saver
-      url: "https://mirrors.tuna.tsinghua.edu.cn/dart-pub/"
-    source: hosted
-    version: "0.1.1"
   flustars:
     dependency: "direct main"
     description:
@@ -184,6 +177,13 @@ packages:
       url: "https://mirrors.tuna.tsinghua.edu.cn/dart-pub/"
     source: hosted
     version: "2.1.1"
+  http:
+    dependency: transitive
+    description:
+      name: http
+      url: "https://mirrors.tuna.tsinghua.edu.cn/dart-pub/"
+    source: hosted
+    version: "0.13.5"
   http_multi_server:
     dependency: transitive
     description:
@@ -205,6 +205,13 @@ packages:
       url: "https://mirrors.tuna.tsinghua.edu.cn/dart-pub/"
     source: hosted
     version: "1.0.3"
+  iptv_check_manager:
+    dependency: "direct main"
+    description:
+      path: "../iptv_check_manager"
+      relative: true
+    source: path
+    version: "0.0.1"
   js:
     dependency: transitive
     description:
@@ -233,13 +240,15 @@ packages:
       url: "https://mirrors.tuna.tsinghua.edu.cn/dart-pub/"
     source: hosted
     version: "1.1.0"
-  m3u_nullsafe:
+  m3u:
     dependency: "direct main"
     description:
-      name: m3u_nullsafe
-      url: "https://mirrors.tuna.tsinghua.edu.cn/dart-pub/"
-    source: hosted
-    version: "1.0.4"
+      path: "."
+      ref: HEAD
+      resolved-ref: "91d4475942c4c0291cf3c035b1a48c651c39d436"
+      url: "https://github.com/uiiang/m3u-parse-utils.git"
+    source: git
+    version: "1.1.0"
   matcher:
     dependency: transitive
     description:

@@ -12,12 +12,16 @@ dependencies:
   flustars: ^2.0.1
   logger: ^1.1.0
   simple_animations: ^5.0.0+3
-  m3u_nullsafe: ^1.0.4
+  m3u:
+    git: https://github.com/uiiang/m3u-parse-utils.git
   settings_ui: ^2.0.2
   xml: any
   worker_manager: ^4.5.0
+  iptv_check_manager:
+    path: ../iptv_check_manager
   flutter:
     sdk: flutter
+
 dependency_overrides:
   stream_channel: 2.1.1
 

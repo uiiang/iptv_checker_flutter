@@ -1,7 +1,7 @@
 
 class Config {
   static bool isCheckRealtime(){
-    return false;
+    return true;
   }
 
   static bool checkEpg() {

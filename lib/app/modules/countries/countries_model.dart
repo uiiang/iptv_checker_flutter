@@ -1,5 +1,11 @@
 import 'package:get/get.dart';
-
+import 'package:m3u/m3u.dart';
+class CountryStatusInfo {
+  String link = "";
+  bool available = false;
+  late M3uGenericEntry entry;
+  CountryStatusInfo(this.link, this.available, this.entry);
+}
 class Countries {
   List<Data>? data;
 

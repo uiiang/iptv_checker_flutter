@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:m3u_nullsafe/m3u_nullsafe.dart';
+import 'package:m3u/m3u.dart';
 import 'package:test/test.dart';
 
 void main() {

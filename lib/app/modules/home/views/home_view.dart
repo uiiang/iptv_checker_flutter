@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:iptv_checker_flutter/app/modules/countries/controllers/countries_controller.dart';
+import 'package:iptv_checker_flutter/app/modules/countries/views/countries_view.dart';
 import 'package:iptv_checker_flutter/app/modules/countries/views/handle_view.dart';
 import 'package:settings_ui/settings_ui.dart';
 
-import '../../countries/views/countries_view.dart';
-import '../controllers/home_controller.dart';
-
 class HomeView extends StatelessWidget {
   const HomeView({Key? key}) : super(key: key);
-  Container buildSetting(){
+  Container buildSetting() {
     return Container(
-      padding: EdgeInsets.all(10),
-      child:  SettingsList(
+      padding: const EdgeInsets.all(10),
+      child: SettingsList(
         contentPadding: EdgeInsets.zero,
         sections: [
           SettingsSection(
@@ -42,12 +40,13 @@ class HomeView extends StatelessWidget {
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     CountriesController controller = Get.put(CountriesController());
     return Scaffold(
         appBar: AppBar(
-          title:Text("请在左侧选择"),
+          title: Text("请在左侧选择"),
           // title: Obx(() => Text(controller.getSelectedCount() == 0
           //     ? "请在左侧选择"
           //     : "已选择${controller.getSelectedCount()}个频道")),

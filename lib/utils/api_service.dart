@@ -14,6 +14,7 @@ class ApiService {
     //https://iptv-org.github.io/epg/guides/af.xml
     var response =
         await Dio().get('https://iptv-org.github.io/epg/guides/$code.xml');
+    Dio().close();
     return response.toString();
   }
 
@@ -22,12 +23,14 @@ class ApiService {
     //     "https://ghproxy.net/https://raw.githubusercontent.com/iptv-org/iptv/master/streams/$code.m3u";
     // final url = "https://github.com/iptv-org/iptv/blob/master/streams/$code.m3u";
     // final url = "https://jsd.cdn.zzko.cn/gh/iptv-org/iptv@master/streams/$code.m3u";
-    final url = "https://raw.fastgit.org/iptv-org/iptv/master/streams/$code.m3u";
+    final url =
+        "https://raw.fastgit.org/iptv-org/iptv/master/streams/$code.m3u";
     // final url = "https://raw.kgithub.com/iptv-org/iptv/master/streams/$code.m3u";
     final savePath =
         '${await FileUtil().getDirectory()}/tmp/source/daily_$code.m3u';
     print('downloadIptvDailyUpdateByCountry code $code');
     final response = await Dio().download(url, savePath);
+    Dio().close();
     if (response.statusCode == 200) {
       return savePath;
     } else {
@@ -39,6 +42,7 @@ class ApiService {
     final savePath = '${await FileUtil().getDirectory()}/tmp/source/$code.m3u';
     final response = await Dio().download(
         "https://iptv-org.github.io/iptv/countries/$code.m3u", savePath);
+    Dio().close();
     if (response.statusCode == 200) {
       return savePath;
     } else {
@@ -51,6 +55,7 @@ class ApiService {
     // https://raw.fastgit.org/iptv-org/iptv/master/streams/cn_cctv.m3u
     var response =
         await Dio().get("https://iptv-org.github.io/iptv/countries/$code.m3u");
+    Dio().close();
     // print('response $response');
     return response.toString();
   }
