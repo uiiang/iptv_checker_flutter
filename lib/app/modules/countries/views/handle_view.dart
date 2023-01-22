@@ -56,15 +56,15 @@ class HandleView extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         //设置
-        Obx(() => DPadDetector(
-              enabled: !controller.handleing.value,
-              onTap: () {
-                print('setting ${controller.setting.value}');
-                controller.toggleSetting();
-              },
-              child: buildHandleBtn(controller.setting.isFalse ? "设置" : "关闭设置",
-                  disable: controller.handleing.value),
-            )),
+        // Obx(() => DPadDetector(
+        //       enabled: !controller.handleing.value,
+        //       onTap: () {
+        //         print('setting ${controller.setting.value}');
+        //         controller.toggleSetting();
+        //       },
+        //       child: buildHandleBtn(controller.setting.isFalse ? "设置" : "关闭设置",
+        //           disable: controller.handleing.value),
+        //     )),
         //清除
         Obx(() => DPadDetector(
               enabled: !controller.handleing.value,

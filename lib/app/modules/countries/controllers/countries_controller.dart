@@ -64,7 +64,7 @@ class CountriesController extends GetxController {
   @override
   void onReady() {
     super.onReady();
-    fetchIptvCountries();
+    // fetchIptvCountries();
   }
 
   @override
@@ -235,7 +235,7 @@ class CountriesController extends GetxController {
         // });
       }
       getSelectedCountriesList().forEach((element) {
-        loadChannelCountToUI(element);
+        loadChannelInfoToUI(element);
       });
       countriesCount.value = countries.length;
     } else {
@@ -254,18 +254,6 @@ class CountriesController extends GetxController {
     }).toList();
   }
 
-  checkSelectedEpg(List<Data> selectedList) async {
-    HttpClient httpClient = HttpClient();
-    httpClient.connectionTimeout = const Duration(milliseconds: 2000);
-    for (final item in selectedList) {
-      if (item.hasEpg.value) {
-        continue;
-      }
-      print('checkSelectedEpg');
-      item.hasEpg.value = await checkEpgUrlByCountry(httpClient, item.code!);
-    }
-  }
-
   ///切换是否选择选择一个国家
   void toggleItem(int index) async {
     final item = countries[index];
@@ -276,16 +264,30 @@ class CountriesController extends GetxController {
     }
     if (item.selected.value && item.code != null) {
       // 根据国家代码下载m3u文件到临时目录，并解析频道数量
-      loadChannelCountToUI(item);
+      loadChannelInfoToUI(item);
       // countries[index].hasEpg.value =
       //     await checkEpgUrlByCountry(countries[index].code!.toLowerCase());
     }
   }
 
   /// 根据国家代码下载m3u文件到临时目录，并解析频道数量
-  loadChannelCountToUI(Data item) async {
+  loadChannelInfoToUI(Data item) async {
     item.savePath = await downloadIptvFile(item.code!);
-    item.channelCount.value = await getM3u8FileChannelCount(item.savePath);
+    M3uGenericEntryWarp entryWarp =
+        await getM3u8FileChannelWrapLocal(item.savePath);
+    item.channelCount.value = entryWarp.entryList.length;
+    // entryWarp.headerEntry.attributes.entries.forEach((element) {
+    //   print('${item.name} ${element.key}-${element.value}');
+    // });
+    // EPG文件
+    // var attributes = entryWarp.headerEntry.attributes;
+
+    // String xTvgUrls =
+    //     attributes.containsKey('x-tvg-url') ? attributes['x-tvg-url']! : '';
+    // if (xTvgUrls.isNotEmpty) {
+    //   List<String> epgUrlList = xTvgUrls.split(',');
+    //   convertEptUrl(epgUrlList);
+    // }
   }
 
   /// 选中的国家数量

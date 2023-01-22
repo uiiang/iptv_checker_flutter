@@ -1,0 +1,41 @@
+
+<channel id="RTHKTV31.hk">
+<display-name>RTHK TV 31</display-name>
+<icon src="https://i.imgur.com/kf818kM.png"/>
+<url>https://rthk.hk</url>
+</channel>
+<channel id="RTHKTV32.hk">
+<display-name>RTHK TV 32</display-name>
+<icon src="https://i.imgur.com/MXLuUoU.png"/>
+<url>https://rthk.hk</url>
+</channel>
+<channel id="RTHKTV33.hk">
+<display-name>RTHK TV 33</display-name>
+<icon src="https://i.imgur.com/2MProun.png"/>
+<url>https://rthk.hk</url>
+</channel>
+<channel id="RTHKTV34.hk">
+<display-name>RTHK TV 34</display-name>
+<icon src="https://i.imgur.com/Kq5A6Qn.png"/>
+<url>https://rthk.hk</url>
+</channel>
+<programme start="20230119160000 +0000" stop="20230119170000 +0000" channel="RTHKTV31.hk">
+<title lang="zh">心居</title>
+<sub-title lang="zh">第十三集</sub-title>
+<category lang="zh">戲劇</category>
+<icon src="https://www.rthk.hk/assets/images/rthk/dtt31/lifeisalongquietriver/10183_1920_s.jpg"/>
+</programme>
+<programme start="20230119170000 +0000" stop="20230119170500 +0000" channel="RTHKTV31.hk">
+<title lang="zh">快閃香港</title>
+<sub-title lang="zh">屠房檢測肉類安全</sub-title>
+<category lang="zh">時事</category>
+<icon src="https://www.rthk.hk/assets/images/rthk/dtt31/flashbackhk/9071_1920_s.jpg"/>
+</programme>
+<programme start="20230119170500 +0000" stop="20230119173000 +0000" channel="RTHKTV31.hk">
+<title lang="zh">鏗鏘集</title>
+<sub-title lang="zh">走塑。不走數</sub-title>
+<category lang="zh">時事</category>
+<category lang="zh">知識</category>
+<icon src="https://www.rthk.hk/assets/images/rthk/dtt31/hkcc/858_1920_s.jpg"/>
+</programme>
+

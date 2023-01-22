@@ -10,12 +10,16 @@ import '../app/modules/countries/countries_model.dart';
 class ApiService {
   static const _TAG = 'ApiService';
 
-  static Future<String> fetchIptvEpg(String code) async {
+  static Future<String> fetchIptvEpg(String url) async {
+    print('url $url');
     //https://iptv-org.github.io/epg/guides/af.xml
-    var response =
-        await Dio().get('https://iptv-org.github.io/epg/guides/$code.xml');
-    Dio().close();
-    return response.toString();
+    Dio().get(url).then((value) {
+      print('response ${value}');
+    }).onError((error, stackTrace) {
+      print(error);
+    });
+    // Dio().close();
+    return '';
   }
 
   static Future<String> downloadIptvDailyUpdateByCountry(String code) async {

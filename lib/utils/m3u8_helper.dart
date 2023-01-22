@@ -133,6 +133,11 @@ Future<List<M3uGenericEntry>> getM3u8FileChannelListLocal(String path) async {
   return await M3uParser.parse(content);
 }
 
+Future<M3uGenericEntryWarp> getM3u8FileChannelWrapLocal(String path) async {
+  final content = await FileUtil().loadFileContent(path);
+  return await M3uParser.parseWrap(content);
+}
+
 Future<int> getM3u8FileChannelCount(String path) async {
   final entryList = await getM3u8FileChannelListLocal(path);
   return entryList.length;
@@ -209,27 +214,27 @@ Future<bool> checkEpgUrlByCountry(httpClient, String code) async {
   return sec;
 }
 
-Future<XmlDocument> getEpgByCountryCode(String code) async {
-  String epgStr = await ApiService.fetchIptvEpg(code);
-  return XmlDocument.parse(epgStr);
-}
+// Future<XmlDocument> getEpgByCountryCode(String code) async {
+//   String epgStr = await ApiService.fetchIptvEpg(code);
+//   return XmlDocument.parse(epgStr);
+// }
 
-Future<bool> genEpgHelper(List<String?> codes) async {
-  String content = "";
-  for (final code in codes) {
-    if (code == null) {
-      continue;
-    }
-    print('start code $code');
-    final xmlDoc = await getEpgByCountryCode(code);
-    final channel = xmlDoc.findAllElements('channel');
-    final programme = xmlDoc.findAllElements('programme');
-    final child = xmlDoc.rootElement.childElements;
-    print(
-        'channel ${channel.length} programme ${programme.length} child ${child.length}');
-  }
-  return true;
-}
+// Future<bool> genEpgHelper(List<String?> codes) async {
+//   String content = "";
+//   for (final code in codes) {
+//     if (code == null) {
+//       continue;
+//     }
+//     print('start code $code');
+//     final xmlDoc = await getEpgByCountryCode(code);
+//     final channel = xmlDoc.findAllElements('channel');
+//     final programme = xmlDoc.findAllElements('programme');
+//     final child = xmlDoc.rootElement.childElements;
+//     print(
+//         'channel ${channel.length} programme ${programme.length} child ${child.length}');
+//   }
+//   return true;
+// }
 
 Future<bool> genChannelToM3uFile(
     String tmpAllAvailablePath, String iptvChannelPath) async {
@@ -268,4 +273,25 @@ Future<String> downloadIptvFile(String code) async {
   return Config.isCheckRealtime()
       ? await downloadIptvByCountryToLocal(code)
       : await downloadIptvDailyUpdateByCountry(code);
+}
+
+void writeEpgFile(String path, String content) {
+  File epgfile = File(path);
+  var ioSink = epgfile.openWrite();
+  ioSink.writeln(content);
+  ioSink.close();
+}
+
+List<XmlDocument> convertEptUrl(List<String> epgUrlList) {
+  List<XmlDocument> xmlDocList = [];
+  epgUrlList.forEach((url) async {
+    print('url $url');
+    String xmlContent = await ApiService.fetchIptvEpg(url);
+    print('xmlContent $xmlContent');
+    // final xmldoc = XmlDocument.parse(xmlContent);
+
+    // xmlDocList.add(xmldoc);
+    // print('xmldoc ${xmldoc.document}');
+  });
+  return xmlDocList;
 }
