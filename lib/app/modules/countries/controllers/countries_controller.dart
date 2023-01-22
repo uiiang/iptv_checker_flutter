@@ -64,7 +64,7 @@ class CountriesController extends GetxController {
   @override
   void onReady() {
     super.onReady();
-    // fetchIptvCountries();
+    fetchIptvCountries();
   }
 
   @override
